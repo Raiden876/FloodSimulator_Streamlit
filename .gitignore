@@ -1,37 +1,62 @@
-# Python
+# Python and virtual environments
 __pycache__/
 *.py[cod]
 *.pyd
-
-# Virtual environments
 .venv/
 venv/
 env/
 ENV/
 
-# Jupyter
-.ipynb_checkpoints/
-
-# Local environment and secrets
+# Local secrets and Streamlit cache
 .env
 .env.*
 !.env.example
-
-# Training caches and logs
+.streamlit/secrets.toml
 /cache/
 /catboost_info/
 
-# Trained model checkpoints
+# Research notebooks and training outputs are not part of the Streamlit app
+/*.ipynb
+/*.png
+/*.csv
 *.pt
 *.pth
 
-# Local flood and GIS data (keep large inputs outside Git)
-*.jpg
-*.png
-*.csv
+# Exclude local GIS data by default
+*.zip
 *.tif
 *.tiff
 *.geojson
-/flood_ml_dataset.csv
-/Philippine_population/
-/ph_boundaries/
+
+# Keep only the 2026 population raster used by simulator.py
+/Philippine_population/*
+!/Philippine_population/philippines_population_2026.tif
+
+# Keep only the municipal boundary files and lookup used by simulator.py
+/ph_boundaries/*
+!/ph_boundaries/PH_Adm2_ProvDists.csv
+!/ph_boundaries/extracted/
+/ph_boundaries/extracted/*
+!/ph_boundaries/extracted/PH_Adm3_MuniCities.shp.cpg
+!/ph_boundaries/extracted/PH_Adm3_MuniCities.shp.dbf
+!/ph_boundaries/extracted/PH_Adm3_MuniCities.shp.prj
+!/ph_boundaries/extracted/PH_Adm3_MuniCities.shp.shp
+!/ph_boundaries/extracted/PH_Adm3_MuniCities.shp.shx
+
+# Keep the hazard archives listed in simulator.py SITE_MAPPING
+!/MetroManila.zip
+!/NuevaEcija.zip
+!/Pampanga.zip
+!/Bulacan.zip
+!/Tarlac.zip
+!/Aurora.zip
+!/Zambales.zip
+!/Bataan.zip
+!/Pangasinan.zip
+!/NuevaVizcaya.zip
+!/Rizal.zip
+!/Quezon.zip
+!/SouthCotabato.zip
+!/Sarangani.zip
+!/DavaoDelSur.zip
+!/DavaoOccidental.zip

@@ -1,33 +1,11 @@
-# Notebook support
-ipykernel
-ipython
-jupyter
-
-# Flood simulator and geospatial data
+# Runtime dependencies for simulator.py on Streamlit Community Cloud
 folium
 geopandas
-osmnx
-rasterio
-requests
-shapely
-streamlit
-streamlit-folium
-elevation
-srtm
-tqdm
-
-# Data handling and plotting
 matplotlib
 numpy
 pandas
-seaborn
-
-# Machine learning
-catboost
-imbalanced-learn
-lightgbm
-optuna
-scikit-learn
-torch
-torchvision
-xgboost
+rasterio
+requests
+shapely
+streamlit==1.62.0
+streamlit-folium

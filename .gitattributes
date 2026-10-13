@@ -1,4 +1,4 @@
-# Normalize text files and use LF for cross-platform source files
+# Normalize source and metadata text files
 * text=auto
 *.py text eol=lf
 *.ipynb text eol=lf
@@ -12,8 +12,10 @@
 *.txt text eol=lf
 *.sh text eol=lf
 *.ps1 text eol=lf
+*.prj text eol=lf
+*.cpg text eol=lf
 
-# Binary model, archive, image, and GIS formats
+# Binary formats: no text conversion or diffs
 *.pt -text -diff -merge
 *.pth -text -diff -merge
 *.zip -text -diff -merge
@@ -28,3 +30,8 @@
 *.shp -text -diff -merge
 *.shx -text -diff -merge
 *.dbf -text -diff -merge
+
+# Deploy-time data objects use Git LFS. Install Git LFS before adding these files.
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.tif filter=lfs diff=lfs merge=lfs -text
+ph_boundaries/extracted/PH_Adm3_MuniCities.shp.shp filter=lfs diff=lfs merge=lfs -text
