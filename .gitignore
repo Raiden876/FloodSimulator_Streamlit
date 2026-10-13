@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Training caches and logs
+/cache/
+/catboost_info/
+
+# Trained model checkpoints
+*.pt
+*.pth
+
+# Local flood and GIS data (keep large inputs outside Git)
+*.jpg
+*.png
+*.csv
+*.tif
+*.tiff
+*.geojson
+/flood_ml_dataset.csv
+/Philippine_population/
+/ph_boundaries/

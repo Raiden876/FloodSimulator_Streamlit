@@ -1,0 +1,30 @@
+# Normalize text files and use LF for cross-platform source files
+* text=auto
+*.py text eol=lf
+*.ipynb text eol=lf
+*.csv text eol=lf
+*.json text eol=lf
+*.geojson text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+
+# Binary model, archive, image, and GIS formats
+*.pt -text -diff -merge
+*.pth -text -diff -merge
+*.zip -text -diff -merge
+*.tif -text -diff -merge
+*.tiff -text -diff -merge
+*.png -text -diff -merge
+*.jpg -text -diff -merge
+*.jpeg -text -diff -merge
+*.pdf -text -diff -merge
+*.parquet -text -diff -merge
+*.gpkg -text -diff -merge
+*.shp -text -diff -merge
+*.shx -text -diff -merge
+*.dbf -text -diff -merge
