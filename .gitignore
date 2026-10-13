@@ -60,3 +60,15 @@ ENV/
 !/Sarangani.zip
 !/DavaoDelSur.zip
 !/DavaoOccidental.zip
+
+# Compact terrain and downloaded hydrology subsets used by the upgraded app
+!/qc_dem_srtm.tif
+!/data/hydrology/worldcover.tif
+!/data/hydrology/hsg.tif
+
+# Site-specific, clipped hydrology rasters for all configured flood areas
+!/data/
+!/data/hydrology/
+!/data/hydrology/sites/
+!/data/hydrology/sites/*/
+!/data/hydrology/sites/*/*.tif

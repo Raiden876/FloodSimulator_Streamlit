@@ -8,8 +8,27 @@ flood-exposure layers.
 """
 
 from pathlib import Path
+import hashlib
+import json
+from dataclasses import replace
+
+from geo_runtime import with_rasterio_runtime
+
+from flood_model import (
+    DISPLAY_DEPTH_THRESHOLD_M, EXPOSURE_DEPTH_THRESHOLD_M,
+    EXPOSURE_SENSITIVITY_THRESHOLDS_M, UNMODELED_EXPOSURE_LABEL,
+    LAND_COVER_LABELS, RainfallEvent, adjust_cn_amc, get_effective_cn,
+    effective_cn_values, empirical_depth_m, make_rainfall_event, route_runoff,
+    validation_metrics, normalize_hsg, rainfall_runoff_analysis,
+)
+from terrain_model import (
+    PhysicalInputs, enrich_runoff_inputs, load_dem_grid, load_physical_grid,
+    build_flow_network, simulate_terrain, terrain_to_polygons, terrain_depth_on_grid,
+    read_aligned_raster, depth_geotiff_bytes, RasterGrid,
+)
 from zipfile import ZipFile
 
+import altair as alt
 import folium
 import geopandas as gpd
 import matplotlib.colors as mcolors
@@ -23,9 +42,11 @@ from rasterio.features import rasterize
 from rasterio.mask import mask as raster_mask
 from rasterio.transform import array_bounds
 from rasterio.windows import Window, from_bounds
+from rasterio.warp import transform_bounds, transform as transform_coordinates, reproject, calculate_default_transform
 from shapely.geometry import mapping
 from shapely.ops import unary_union
 from streamlit_folium import st_folium
+from site_config import SITE_MAPPING, site_key
 
 
 DATA_CRS = "EPSG:4326"
@@ -83,95 +104,12 @@ POPULATION_RISK_LABELS = {
 }
 
 # These are the population-impact bins requested for the simulated flood.
-# Values below 0.1 m are reported as 0 m/no flood, including the simulator's
-# shallow display threshold between 0.05 m and 0.1 m.
-FLOOD_EXPOSURE_ORDER = ["0 m (no flood)", "0.1–1 m", "1–2 m", ">2 m"]
+# Shallow modeled depths below the exposure threshold remain visible on the
+# flood map. Unknown cells outside terrain coverage are reported separately.
+FLOOD_EXPOSURE_ORDER = ["Below exposure threshold", "0.1–1 m", "1–2 m", ">2 m", UNMODELED_EXPOSURE_LABEL]
 
 # Single source of truth for the archives shown in the app. Centers are used
 # for SoilGrids queries and map navigation.
-SITE_MAPPING = {
-    "Metro Manila": {
-        "archive": "MetroManila.zip",
-        "center": (14.6091, 121.0223),
-        "return_period_yr": 25,
-    },
-    "Nueva Ecija": {
-        "archive": "NuevaEcija.zip",
-        "center": (15.50, 121.00),
-        "return_period_yr": 25,
-    },
-    "Pampanga": {
-        "archive": "Pampanga.zip",
-        "center": (15.08, 120.62),
-        "return_period_yr": 25,
-    },
-    "Bulacan": {
-        "archive": "Bulacan.zip",
-        "center": (14.90, 120.90),
-        "return_period_yr": 25,
-    },
-    "Tarlac": {
-        "archive": "Tarlac.zip",
-        "center": (15.48, 120.60),
-        "return_period_yr": 25,
-    },
-    "Aurora": {
-        "archive": "Aurora.zip",
-        "center": (15.75, 121.40),
-        "return_period_yr": 25,
-    },
-    "Zambales": {
-        "archive": "Zambales.zip",
-        "center": (15.17, 120.30),
-        "return_period_yr": 25,
-    },
-    "Bataan": {
-        "archive": "Bataan.zip",
-        "center": (14.75, 120.45),
-        "return_period_yr": 25,
-    },
-    "Pangasinan": {
-        "archive": "Pangasinan.zip",
-        "center": (15.90, 120.40),
-        "return_period_yr": 25,
-    },
-    "Nueva Vizcaya": {
-        "archive": "NuevaVizcaya.zip",
-        "center": (16.30, 121.20),
-        "return_period_yr": 25,
-    },
-    "Rizal": {
-        "archive": "Rizal.zip",
-        "center": (14.60, 121.20),
-        "return_period_yr": 25,
-    },
-    "Quezon": {
-        "archive": "Quezon.zip",
-        "center": (14.00, 121.60),
-        "return_period_yr": 25,
-    },
-    "South Cotabato": {
-        "archive": "SouthCotabato.zip",
-        "center": (6.30, 125.00),
-        "return_period_yr": 25,
-    },
-    "Sarangani": {
-        "archive": "Sarangani.zip",
-        "center": (6.20, 125.20),
-        "return_period_yr": 25,
-    },
-    "Davao del Sur": {
-        "archive": "DavaoDelSur.zip",
-        "center": (6.70, 125.30),
-        "return_period_yr": 25,
-    },
-    "Davao Occidental": {
-        "archive": "DavaoOccidental.zip",
-        "center": (6.00, 125.50),
-        "return_period_yr": 100,
-    },
-}
-
 HAZARD_LABELS = {
     1: "Low Hazard (0–0.5 m)",
     2: "Medium Hazard (>0.5–1.5 m)",
@@ -179,7 +117,8 @@ HAZARD_LABELS = {
 }
 
 BASE_DEPTH_BY_VAR = {1: 0.25, 2: 1.00, 3: 2.00}
-CN_BY_VAR = {1: 78, 2: 88, 3: 98}
+LEGACY_CN_BY_VAR = {1: 78, 2: 88, 3: 98}
+CN_BY_VAR = LEGACY_CN_BY_VAR  # Compatibility for existing notebooks; baseline only.
 
 
 def _find_shapefile_member(archive_path: Path) -> str:
@@ -273,7 +212,8 @@ def _prepare_layer(
     layer["site_name"] = site_name
     layer["hazard_level"] = layer["Var"].map(HAZARD_LABELS)
     layer["base_depth_m"] = layer["Var"].map(BASE_DEPTH_BY_VAR)
-    layer["CN_base"] = layer["Var"].map(CN_BY_VAR)
+    layer["CN_base"] = layer["Var"].map(LEGACY_CN_BY_VAR)
+    layer["CN_source"] = "Legacy hazard-based baseline"
     layer["source_return_period_yr"] = int(site_config["return_period_yr"])
     layer["source_file"] = site_config["archive"]
 
@@ -284,6 +224,7 @@ def _prepare_layer(
             "hazard_level",
             "base_depth_m",
             "CN_base",
+            "CN_source",
             "area_sqkm",
             "source_return_period_yr",
             "source_file",
@@ -530,11 +471,11 @@ def classify_population_density(population_density_per_sqkm: float) -> str:
     return POPULATION_DENSITY_LABELS[code]
 
 
-def depth_to_flood_class(depth: float, threshold_m: float = 0.05) -> str:
+def depth_to_flood_class(depth: float, threshold_m: float = EXPOSURE_DEPTH_THRESHOLD_M) -> str:
     """Classify simulated flood depth using the population-impact bands."""
 
     depth = float(depth)
-    population_threshold = max(0.1, float(threshold_m))
+    population_threshold = max(EXPOSURE_DEPTH_THRESHOLD_M, float(threshold_m))
     if not np.isfinite(depth) or depth < population_threshold:
         return FLOOD_EXPOSURE_ORDER[0]
     if depth < 1.0:
@@ -679,6 +620,10 @@ def _rasterize_simulated_depth(
 
     if simulated_data.empty or "sim_depth_m" not in simulated_data.columns:
         return np.zeros(out_shape, dtype=np.float32)
+
+    terrain = simulated_data.attrs.get("terrain_result")
+    if terrain is not None:
+        return terrain_depth_on_grid(terrain, out_shape, transform, source_crs)
 
     source_simulation = simulated_data.to_crs(source_crs).copy()
     source_simulation["sim_depth_m"] = pd.to_numeric(
@@ -842,9 +787,10 @@ def _population_flood_summary_uncached(
             )
             valid = np.isfinite(population) & (population > 0.0)
             depth_codes = np.zeros(population.shape, dtype=np.uint8)
-            depth_codes[(depths >= 0.1) & (depths < 1.0)] = 1
+            depth_codes[(depths >= EXPOSURE_DEPTH_THRESHOLD_M) & (depths < 1.0)] = 1
             depth_codes[(depths >= 1.0) & (depths <= 2.0)] = 2
             depth_codes[depths > 2.0] = 3
+            depth_codes[~np.isfinite(depths)] = 4
             people_by_band = np.bincount(
                 depth_codes[valid],
                 weights=population[valid],
@@ -857,7 +803,7 @@ def _population_flood_summary_uncached(
                         "site_name": str(boundary.site_name),
                         "flood_depth_band": label,
                         "people_in_band": people,
-                        "people_affected": people if code > 0 else 0.0,
+                        "people_affected": people if 0 < code < 4 else 0.0,
                     }
                 )
 
@@ -869,14 +815,20 @@ def _simulation_population_cache_key(
 ) -> str:
     """Build a cache key that changes when simulated depths change."""
 
-    depths = tuple(
-        round(float(value), 4)
-        for value in pd.to_numeric(
-            simulated_data.get("sim_depth_m", pd.Series(dtype=float)),
-            errors="coerce",
-        ).fillna(0.0)
-    )
-    return repr((tuple(simulated_data.get("site_name", [])), depths))
+    digest = hashlib.sha256()
+    digest.update(pd.to_numeric(simulated_data.get("sim_depth_m", pd.Series(dtype=float)),
+                                errors="coerce").to_numpy(dtype=float).tobytes())
+    digest.update(repr(tuple(simulated_data.get("site_name", []))).encode())
+    digest.update(repr(simulated_data.crs).encode())
+    for geometry in simulated_data.geometry:
+        digest.update(geometry.wkb if geometry is not None else b"missing")
+    terrain = simulated_data.attrs.get("terrain_result")
+    if terrain is not None:
+        digest.update(repr((terrain.grid.shape, terrain.grid.transform, terrain.grid.crs)).encode())
+        digest.update(terrain.max_depth_m.tobytes())
+        if terrain.report_mask is not None:
+            digest.update(terrain.report_mask.tobytes())
+    return digest.hexdigest()
 
 
 @st.cache_data(show_spinner="Calculating population flood exposure...")
@@ -918,13 +870,13 @@ def population_flood_summary(
 def _population_data_cache_key(hazard_data: gpd.GeoDataFrame) -> str:
     """Build a small cache key without asking Streamlit to hash geometries."""
 
-    source_files = tuple(hazard_data.get("source_file", pd.Series(dtype=str)).astype(str))
-    area_total = float(
-        pd.to_numeric(hazard_data.get("area_sqkm", pd.Series(dtype=float)), errors="coerce")
-        .sum()
-    )
-    bounds = tuple(round(float(value), 6) for value in hazard_data.total_bounds)
-    return repr((len(hazard_data), source_files, round(area_total, 6), bounds))
+    digest = hashlib.sha256()
+    digest.update(repr(hazard_data.crs).encode())
+    for name in ("site_name", "source_file", "Var", "area_sqkm"):
+        digest.update(repr(tuple(hazard_data.get(name, []))).encode())
+    for geometry in hazard_data.geometry:
+        digest.update(geometry.wkb if geometry is not None else b"missing")
+    return digest.hexdigest()
 
 
 @st.cache_data(show_spinner="Estimating population exposure...")
@@ -960,164 +912,90 @@ def load_data(data_dir: str | Path = ".") -> gpd.GeoDataFrame:
 
 @st.cache_data(show_spinner=False)
 def fetch_soil_properties(lat: float, lon: float) -> tuple[float, float, str]:
-    """Fetch clay/sand percentages and a simple hydrologic soil group."""
+    """Legacy optional texture lookup; texture is insufficient to assign HSG."""
 
     try:
-        url = (
-            "https://rest.isric.org/soilgrids/v2.0/properties/query"
-            f"?lon={lon}&lat={lat}&property=clay&property=sand"
-            "&depth=0-5cm&value=mean"
-        )
-        response = requests.get(url, timeout=5)
+        response = requests.get(
+            "https://rest.isric.org/soilgrids/v2.0/properties/query",
+            params={"lon": lon, "lat": lat, "property": ["clay", "sand"],
+                    "depth": "0-5cm", "value": "mean"}, timeout=5)
         response.raise_for_status()
-        layers = response.json()["properties"]["layers"]
-
-        values = {
-            layer["name"]: layer["depths"][0]["values"]["mean"] / 10.0
-            for layer in layers
-            if layer.get("name") in {"clay", "sand"}
-        }
-        clay_pct = float(values.get("clay", 0.0))
-        sand_pct = float(values.get("sand", 0.0))
-
-        if clay_pct > 40:
-            hsg = "D (Very Slow / Clay)"
-        elif clay_pct > 27:
-            hsg = "C (Slow / Clay Loam)"
-        elif sand_pct > 50:
-            hsg = "A (High Infiltration / Sandy)"
-        else:
-            hsg = "B (Moderate / Loam)"
-
-        return round(clay_pct, 1), round(sand_pct, 1), hsg
-    except Exception:
-        # A stable fallback keeps the simulator usable when SoilGrids is down.
-        return 48.0, 18.0, "D (Very Slow / Default profile)"
-
-
-def adjust_cn_amc(cn_ii: float, prior_rain_mm: float) -> float:
-    """Adjust Curve Number II for antecedent moisture conditions."""
-
-    cn_ii = float(cn_ii)
-    prior_rain_mm = float(prior_rain_mm)
-    if prior_rain_mm < 35.0:
-        return (4.2 * cn_ii) / (10.0 - (0.058 * cn_ii))
-    if prior_rain_mm > 52.5:
-        return (23.0 * cn_ii) / (10.0 + (0.13 * cn_ii))
-    return cn_ii
+        values = {layer["name"]: layer["depths"][0]["values"]["mean"] / 10.
+                  for layer in response.json()["properties"]["layers"]
+                  if layer.get("name") in {"clay", "sand"}}
+        return float(values.get("clay", np.nan)), float(values.get("sand", np.nan)), "Texture only; HSG requires conductivity and subsurface diagnostics"
+    except (requests.RequestException, KeyError, TypeError, ValueError):
+        return np.nan, np.nan, "SoilGrids unavailable; no measured soil profile"
 
 
 def compute_polygon_depth(
-    row: pd.Series,
-    rain_mm: float,
-    duration_h: float,
-    prior_rain_mm: float = 20.0,
-    benchmark_rain_mm: float = 180.0,
+    row: pd.Series, rain_mm: float, duration_h: float,
+    prior_rain_mm: float = 20.0, benchmark_rain_mm: float = 180.0,
 ) -> float:
-    """Calculate simulated depth for one hazard polygon."""
-
-    cn_value = row["CN_amc"] if "CN_amc" in row else row["CN_base"]
-    cn = adjust_cn_amc(cn_value, prior_rain_mm)
-    base_depth = float(row["base_depth_m"])
-    retention_s = (25400.0 / cn) - 254.0
-    initial_abstraction = 0.2 * retention_s
-
-    def runoff(rainfall: float) -> float:
-        if rainfall <= initial_abstraction:
-            return 0.0
-        return ((rainfall - initial_abstraction) ** 2) / (
-            rainfall + 0.8 * retention_s
-        )
-
-    actual_runoff = runoff(float(rain_mm))
-    benchmark_runoff = runoff(float(benchmark_rain_mm))
-    time_factor = 1.0 - np.exp(-1.5 * (float(duration_h) / 2.0))
-    ratio = 0.0 if benchmark_runoff <= 0 else actual_runoff / benchmark_runoff
-    return round(max(0.0, base_depth * ratio * time_factor), 2)
+    """Corrected scalar baseline, using the same CN/depth logic as simulate_flood."""
+    cn = get_effective_cn(row, prior_rain_mm)
+    return float(empirical_depth_m(cn, row["base_depth_m"], rain_mm, duration_h, benchmark_rain_mm))
 
 
 def simulate_flood(
-    hazard_data: gpd.GeoDataFrame,
-    rain_mm: float,
-    duration_h: float,
-    prior_rain_mm: float,
-    threshold_m: float = 0.05,
+    hazard_data: gpd.GeoDataFrame, rain_mm: float, duration_h: float,
+    prior_rain_mm: float, threshold_m: float = DISPLAY_DEPTH_THRESHOLD_M,
     benchmark_rain_mm: float = 180.0,
     population_raster_path: str | Path | None = None,
+    rainfall_event: RainfallEvent | None = None,
+    routing_time_h: float = 1.0, use_routed_depth: bool = False,
 ) -> gpd.GeoDataFrame:
-    """Apply the AMC-adjusted SCS-CN model to every configured site polygon.
+    """Corrected baseline or routed empirical scenario with shared event runoff.
 
-    If a population raster is supplied and the input has not already been
-    enriched, each result also includes the estimated population in the
-    polygon and the number of people affected by the simulated flood.
+    A supplied rainfall series is authoritative for total and duration. Routed
+    depth remains an empirical NOAH-depth scaling; terrain inundation uses a
+    separate model that does not use NOAH hazard as a physical predictor.
     """
-
-    rain_mm = float(rain_mm)
-    duration_h = float(duration_h)
-    prior_rain_mm = float(prior_rain_mm)
-    if rain_mm < 0:
-        raise ValueError("rain_mm must be non-negative")
-    if duration_h <= 0:
-        raise ValueError("duration_h must be greater than zero")
-
+    if not np.isfinite(prior_rain_mm) or prior_rain_mm < 0:
+        raise ValueError("prior_rain_mm must be finite and non-negative")
+    if not np.isfinite(threshold_m) or threshold_m < 0:
+        raise ValueError("threshold_m must be finite and non-negative")
+    event = rainfall_event or make_rainfall_event(rain_mm, duration_h)
+    rain_mm, duration_h = event.total_mm, event.duration_h
     simulated = hazard_data.copy()
     if population_raster_path is not None and "population_estimate" not in simulated:
         simulated = add_population_exposure(simulated, population_raster_path)
-    simulated["CN_amc"] = simulated["CN_base"].apply(
-        lambda cn: adjust_cn_amc(cn, prior_rain_mm)
-    )
-
-    cn = simulated["CN_amc"].astype(float).to_numpy()
-    base_depth = simulated["base_depth_m"].astype(float).to_numpy()
-    retention_s = (25400.0 / cn) - 254.0
-    initial_abstraction = 0.2 * retention_s
-
-    actual_runoff = np.where(
-        rain_mm <= initial_abstraction,
-        0.0,
-        ((rain_mm - initial_abstraction) ** 2)
-        / (rain_mm + 0.8 * retention_s),
-    )
-    benchmark_rain_mm = float(benchmark_rain_mm)
-    benchmark_runoff = np.where(
-        benchmark_rain_mm <= initial_abstraction,
-        0.0,
-        ((benchmark_rain_mm - initial_abstraction) ** 2)
-        / (benchmark_rain_mm + 0.8 * retention_s),
-    )
-    time_factor = 1.0 - np.exp(-1.5 * (duration_h / 2.0))
-    scaling_ratio = np.divide(
-        actual_runoff * time_factor,
-        benchmark_runoff,
-        out=np.zeros_like(actual_runoff, dtype=float),
-        where=benchmark_runoff > 0,
-    )
-
-    simulated["sim_depth_m"] = np.round(
-        np.maximum(0.0, base_depth * scaling_ratio), 2
-    )
-    simulated["flood_status"] = np.where(
-        simulated["sim_depth_m"] >= float(threshold_m), "Flooded", "Below threshold"
-    )
-    simulated["flood_exposure_class"] = [
-        depth_to_flood_class(depth, threshold_m=threshold_m)
-        for depth in simulated["sim_depth_m"]
-    ]
-
-    if "population_estimate" in simulated.columns:
-        population = pd.to_numeric(
-            simulated["population_estimate"], errors="coerce"
-        ).fillna(0.0)
-    else:
-        # Keep the simulator usable when no population raster is available.
-        population = pd.Series(0.0, index=simulated.index)
-    simulated["affected_population"] = np.where(
-        simulated["sim_depth_m"] >= 0.1, population, 0.0
-    )
+    cn = effective_cn_values(simulated, prior_rain_mm)
+    simulated["CN_amc"] = cn
+    depths = empirical_depth_m(cn, simulated["base_depth_m"].to_numpy(dtype=float),
+                               rain_mm, duration_h, benchmark_rain_mm)
+    routed = route_runoff(event, cn, routing_time_h)
+    if use_routed_depth:
+        reference = route_runoff(make_rainfall_event(benchmark_rain_mm, duration_h), cn, routing_time_h)
+        ratio = np.divide(routed["peak_storage_mm"], reference["peak_storage_mm"],
+                          out=np.zeros_like(cn), where=reference["peak_storage_mm"] > 0)
+        depths = simulated["base_depth_m"].to_numpy(dtype=float) * ratio * (1. - np.exp(-.75 * duration_h))
+    simulated["sim_depth_m"] = depths
+    simulated["flood_status"] = np.where(depths >= threshold_m, "Flooded", "Below threshold")
+    simulated["flood_exposure_class"] = [depth_to_flood_class(depth) for depth in depths]
+    population = pd.to_numeric(simulated.get("population_estimate", pd.Series(0., index=simulated.index)),
+                               errors="coerce").fillna(0.)
+    simulated["affected_population"] = np.where(depths >= EXPOSURE_DEPTH_THRESHOLD_M, population, 0.)
+    area_m2 = (simulated["area_sqkm"].to_numpy(dtype=float) * 1e6 if "area_sqkm" in simulated
+               else simulated.to_crs(AREA_CRS).geometry.area.to_numpy())
+    simulated["runoff_mm"] = routed["runoff_mm"]
+    simulated["runoff_volume_m3"] = routed["runoff_mm"] * area_m2 / 1000.
+    simulated["peak_runoff_m3_s"] = routed["peak_mm_h"] * area_m2 / 3.6e6
+    simulated["peak_runoff_time_h"] = routed["peak_time_h"]
+    simulated["model_method"] = "Routed empirical depth" if use_routed_depth else "Corrected empirical baseline"
+    volumes = area_m2 / 1000.
+    simulated.attrs["runoff_hydrograph"] = pd.DataFrame({
+        "time_h": routed["time_h"], "rain_mm": routed["rain_mm"],
+        "runoff_generated_m3": routed["incremental_runoff_mm"] @ volumes,
+        "outflow_m3_s": routed["outlet_mm_h"] @ volumes / 3600.,
+        "outflow_interval_mean_m3_s": (routed["outflow_mm"] @ volumes) / (routed["interval_h"] * 3600.),
+        "stored_water_m3": routed["storage_mm"] @ volumes,
+    })
+    simulated.attrs["runoff_balance_error_m3"] = float(routed["balance_error_mm"] @ volumes)
     return simulated
 
 
-def flooded_area_sqkm(simulated_data: gpd.GeoDataFrame, threshold_m: float = 0.05) -> float:
+def flooded_area_sqkm(simulated_data: gpd.GeoDataFrame, threshold_m: float = DISPLAY_DEPTH_THRESHOLD_M) -> float:
     """Return flooded area using the pre-simplification area field."""
 
     active = simulated_data[simulated_data["sim_depth_m"] >= float(threshold_m)]
@@ -1144,6 +1022,7 @@ def risk_to_hex(var_code: int) -> str:
 
 
 @st.cache_data(show_spinner=False)
+@with_rasterio_runtime
 def _population_dot_data(
     bounds: tuple[float, float, float, float],
     population_raster_path: str,
@@ -1152,12 +1031,15 @@ def _population_dot_data(
     """Aggregate population cells into a manageable set of dot locations."""
 
     with rasterio.open(population_raster_path) as source:
-        requested_window = from_bounds(*bounds, transform=source.transform)
+        if source.crs is None:
+            raise ValueError("Population raster has no CRS")
+        source_bounds = transform_bounds(DATA_CRS, source.crs, *bounds)
+        requested_window = from_bounds(*source_bounds, transform=source.transform)
         try:
             window = requested_window.intersection(
                 Window(0, 0, source.width, source.height)
             )
-        except ValueError as exc:
+        except (ValueError, rasterio.errors.WindowError) as exc:
             raise ValueError("Selected map extent does not overlap the population raster") from exc
 
         source_pixel_count = max(window.width * window.height, 1.0)
@@ -1192,24 +1074,19 @@ def _population_dot_data(
             window.height / output_height
         )
         population = population_average * source_cells_per_dot * valid_fraction
-        source_cell_area_sqkm = abs(source.transform.a * source.transform.e) * (
-            111.32**2
-        ) * np.cos(
-            np.deg2rad(
-                output_transform.f
-                + ((np.arange(output_height, dtype=float) + 0.5) * output_transform.e)
-            )
-        )
-        density = np.divide(
-            population_average,
-            source_cell_area_sqkm[:, None],
-            out=np.full(population_average.shape, np.nan, dtype=float),
-            where=source_cell_area_sqkm[:, None] > 0.0,
-        )
-
         rows, cols = np.indices((output_height, output_width), dtype=float)
-        longitudes = output_transform.c + (cols + 0.5) * output_transform.a
-        latitudes = output_transform.f + (rows + 0.5) * output_transform.e
+        xs = output_transform.c + (cols + .5) * output_transform.a
+        ys = output_transform.f + (rows + .5) * output_transform.e
+        longitudes, latitudes = transform_coordinates(source.crs, DATA_CRS, xs.ravel(), ys.ravel())
+        longitudes = np.asarray(longitudes).reshape(xs.shape)
+        latitudes = np.asarray(latitudes).reshape(ys.shape)
+        if source.crs.is_projected:
+            unit_m = source.crs.linear_units_factor[1]
+            cell_area = abs(source.transform.a * source.transform.e) * unit_m ** 2 / 1e6
+        else:
+            cell_area = abs(source.transform.a * source.transform.e) * 111.32 ** 2 * np.cos(np.deg2rad(latitudes))
+        density = np.divide(population_average, cell_area,
+                            out=np.full(population_average.shape, np.nan), where=np.asarray(cell_area) > 0.)
         valid = np.isfinite(population) & (population > 0.0)
         if not valid.any():
             return pd.DataFrame(
@@ -1398,18 +1275,15 @@ def _boundary_geometry_cache_key(
 ) -> tuple[tuple[str, tuple[float, float, float, float], float], ...]:
     """Build a stable cache key for the selected boundary geometries."""
 
-    metric_boundaries = selected_boundaries.to_crs(AREA_CRS)
-    return tuple(
-        (
-            str(row.site_name),
-            tuple(round(float(value), 2) for value in row.geometry.bounds),
-            round(float(row.geometry.area), 2),
-        )
-        for row in metric_boundaries.itertuples()
-    )
+    if selected_boundaries is None:
+        return ()
+    return tuple((str(row.site_name), str(selected_boundaries.crs),
+                  hashlib.sha256(row.geometry.wkb).hexdigest())
+                 for row in selected_boundaries.itertuples())
 
 
 @st.cache_data(show_spinner=False)
+@with_rasterio_runtime
 def _population_heatmap_data(
     population_raster_path: str,
     boundary_cache_key: tuple[tuple[str, tuple[float, float, float, float], float], ...],
@@ -1436,6 +1310,15 @@ def _population_heatmap_data(
                 continue
 
             values = np.asarray(masked_values[0].filled(np.nan), dtype=float)
+            if source.crs != rasterio.crs.CRS.from_string(DATA_CRS):
+                source_bounds = array_bounds(*values.shape, transform)
+                geographic_transform, width, height = calculate_default_transform(
+                    source.crs, DATA_CRS, values.shape[1], values.shape[0], *source_bounds)
+                geographic_values = np.full((height, width), np.nan, dtype=float)
+                reproject(values, geographic_values, src_transform=transform, src_crs=source.crs,
+                          src_nodata=np.nan, dst_transform=geographic_transform, dst_crs=DATA_CRS,
+                          dst_nodata=np.nan, resampling=Resampling.nearest)
+                values, transform = geographic_values, geographic_transform
             valid = np.isfinite(values) & (values > 0.0)
             if not valid.any():
                 continue
@@ -1502,14 +1385,14 @@ def _population_dot_legend_html(population_mode: str) -> str:
     """Build the legend for one of the separate population dot maps."""
 
     if population_mode == "Affected population by flood":
-        legend_body = """
+        legend_body = f"""
             <b>Affected population by flood depth</b><br>
             <div style="background:linear-gradient(to right,#ffffd9,#41b6c4,#225ea8,#081d58);
                         height:16px; width:100%; border-radius:3px; margin:6px 0;"></div>
             <div style="display:flex; justify-content:space-between;">
-                <span>0.1 m</span><span>1 m</span><span>2 m+</span>
+                <span>{EXPOSURE_DEPTH_THRESHOLD_M:.2f} m</span><span>1 m</span><span>2 m+</span>
             </div>
-            <div style="margin-top:6px;">Only dots at simulated depths of 0.1 m or more are shown.</div>
+            <div style="margin-top:6px;">Only dots at simulated depths of {EXPOSURE_DEPTH_THRESHOLD_M:.2f} m or more are shown.</div>
         """
     else:
         legend_body = """
@@ -1534,7 +1417,7 @@ def _population_dot_legend_html(population_mode: str) -> str:
 def _population_dots_in_flood(
     population_dots: pd.DataFrame,
     simulated_data: gpd.GeoDataFrame,
-    threshold_m: float = 0.1,
+    threshold_m: float = EXPOSURE_DEPTH_THRESHOLD_M,
 ) -> pd.DataFrame:
     """Keep population dots whose centers fall inside simulated flood areas."""
 
@@ -1548,19 +1431,28 @@ def _population_dots_in_flood(
         ),
         crs=DATA_CRS,
     )
-    flood_polygons = simulated_data[
-        simulated_data["sim_depth_m"] >= float(threshold_m)
-    ][["sim_depth_m", "geometry"]].copy()
-    if flood_polygons.empty:
-        return population_dots.iloc[0:0].copy()
-    if flood_polygons.crs != points.crs:
-        flood_polygons = flood_polygons.to_crs(points.crs)
-
-    joined = gpd.sjoin(points, flood_polygons, how="left", predicate="within")
-    max_depth_by_point = joined.groupby(level=0)["sim_depth_m"].max()
-    points["sim_depth_m"] = (
-        points.index.to_series().map(max_depth_by_point).fillna(0.0).to_numpy()
-    )
+    terrain = simulated_data.attrs.get("terrain_result")
+    if terrain is not None:
+        projected = points.to_crs(terrain.grid.crs)
+        columns, rows = ~terrain.grid.transform * (projected.geometry.x.to_numpy(), projected.geometry.y.to_numpy())
+        columns, rows = np.floor(columns).astype(int), np.floor(rows).astype(int)
+        inside = (rows >= 0) & (columns >= 0) & (rows < terrain.grid.shape[0]) & (columns < terrain.grid.shape[1])
+        depths = np.full(len(points), np.nan)
+        depths[inside] = terrain.max_depth_m[rows[inside], columns[inside]]
+        if terrain.report_mask is not None:
+            modeled = np.zeros(len(points), bool)
+            modeled[inside] = terrain.report_mask[rows[inside], columns[inside]]
+            depths[~modeled] = np.nan
+        points["sim_depth_m"] = depths
+    else:
+        flood_polygons = simulated_data[simulated_data["sim_depth_m"] >= float(threshold_m)][["sim_depth_m", "geometry"]].copy()
+        if flood_polygons.empty:
+            return population_dots.iloc[0:0].copy()
+        if flood_polygons.crs != points.crs:
+            flood_polygons = flood_polygons.to_crs(points.crs)
+        joined = gpd.sjoin(points, flood_polygons, how="left", predicate="within")
+        max_depth_by_point = joined.groupby(level=0)["sim_depth_m"].max()
+        points["sim_depth_m"] = points.index.to_series().map(max_depth_by_point).fillna(0.).to_numpy()
     points = points[points["sim_depth_m"] >= float(threshold_m)].copy()
     if points.empty:
         return population_dots.iloc[0:0].copy()
@@ -1626,7 +1518,7 @@ def build_population_map(
     population_mode: str = "Population density",
     boundary_data: gpd.GeoDataFrame | None = None,
     simulated_data: gpd.GeoDataFrame | None = None,
-    threshold_m: float = 0.1,
+    threshold_m: float = EXPOSURE_DEPTH_THRESHOLD_M,
 ) -> folium.Map:
     """Build the affected-population dot map or the density heatmap facade."""
 
@@ -1718,12 +1610,12 @@ def _legend_html(map_mode: str) -> str:
     """Build the legend for the flood-hazard map only."""
 
     if map_mode == "Continuous depth spectrum":
-        legend_body = """
+        legend_body = f"""
             <b>Simulated water depth</b><br>
             <div style="background:linear-gradient(to right,#E0F3F8,#ABD9E9,#74ADD1,#4575B4,#313695,#081D58);
                         height:16px; width:100%; border-radius:3px; margin:6px 0;"></div>
             <div style="display:flex; justify-content:space-between;">
-                <span>0.1 m</span><span>1.0 m</span><span>2.5 m+</span>
+                <span>{DISPLAY_DEPTH_THRESHOLD_M:.2f} m</span><span>1.0 m</span><span>2.5 m+</span>
             </div>
             <div style="margin-top:6px;">Blue tones show simulated flood depth; hazard classes remain yellow, orange, and red.</div>
         """
@@ -1851,7 +1743,7 @@ def _site_summary(
         .reset_index()
     )
     active_area = (
-        simulated_data[simulated_data["sim_depth_m"] >= 0.05]
+        simulated_data[simulated_data["sim_depth_m"] >= DISPLAY_DEPTH_THRESHOLD_M]
         .groupby("site_name")["area_sqkm"]
         .sum()
     )
@@ -1933,267 +1825,490 @@ def population_impact_summary(
     return summary
 
 
+def _population_exposure_sensitivity_uncached(
+    simulated_data, population_raster_path, boundary_data,
+    thresholds_m=EXPOSURE_SENSITIVITY_THRESHOLDS_M,
+):
+    """Threshold sensitivity on disjoint population cells within site boundaries."""
+    thresholds = np.asarray(thresholds_m, dtype=float)
+    if np.any(~np.isfinite(thresholds)) or np.any(thresholds < 0):
+        raise ValueError("Exposure thresholds must be finite and non-negative")
+    rows = []
+    boundaries = _selected_boundary_data(simulated_data, boundary_data)
+    if boundaries is None or boundaries.empty:
+        return pd.DataFrame(columns=["site_name", "threshold_m", "people_affected", "people_modeled", "people_unmodeled"])
+    with rasterio.open(population_raster_path) as source:
+        for boundary in boundaries.to_crs(source.crs).itertuples():
+            population, transform = _population_values_for_boundary(source, boundary.geometry)
+            if population is None:
+                continue
+            site = simulated_data[simulated_data["site_name"].eq(boundary.site_name)]
+            depths = _rasterize_simulated_depth(site, source.crs, population.shape, transform)
+            populated = np.isfinite(population) & (population > 0.)
+            modeled = populated & np.isfinite(depths)
+            for threshold in thresholds:
+                rows.append({"site_name": boundary.site_name, "threshold_m": float(threshold),
+                             "people_affected": float(population[modeled & (depths >= threshold)].sum()),
+                             "people_modeled": float(population[modeled].sum()),
+                             "people_unmodeled": float(population[populated & ~np.isfinite(depths)].sum())})
+    return pd.DataFrame(rows)
+
+
+@st.cache_data(ttl=3600, max_entries=16, show_spinner=False)
+def _exposure_sensitivity_cached(population_path, simulation_key, boundary_key, thresholds_m,
+                                 _simulated_data, _boundary_data):
+    return _population_exposure_sensitivity_uncached(_simulated_data, population_path, _boundary_data, thresholds_m)
+
+
+def population_exposure_sensitivity(simulated_data, population_raster_path, boundary_data,
+                                    thresholds_m=EXPOSURE_SENSITIVITY_THRESHOLDS_M):
+    if boundary_data is None or boundary_data.empty:
+        return pd.DataFrame(columns=["site_name", "threshold_m", "people_affected", "people_modeled", "people_unmodeled"])
+    return _exposure_sensitivity_cached(str(population_raster_path),
+                                       _simulation_population_cache_key(simulated_data),
+                                       _boundary_geometry_cache_key(boundary_data), tuple(thresholds_m),
+                                       simulated_data, boundary_data)
+
+
+def _input_file_key(inputs, dem_path=""):
+    paths = [dem_path] + [str(getattr(inputs, name)) for name in inputs.__dataclass_fields__ if name.endswith("_path")]
+    return tuple((p, Path(p).stat().st_mtime_ns, Path(p).stat().st_size) for p in paths if p)
+
+
+@st.cache_data(ttl=3600, max_entries=8, show_spinner="Preparing spatial runoff inputs...")
+def _runoff_inputs_cached(polygon_key, inputs, file_key, resolution_m, _polygons):
+    return enrich_runoff_inputs(_polygons, inputs, resolution_m)
+
+
+@st.cache_data(ttl=3600, max_entries=4, show_spinner="Preparing terrain connectivity...")
+def _terrain_inputs_cached(dem_path, resolution_m, inputs, file_key):
+    grid, dem = load_dem_grid(dem_path, resolution_m)
+    cn, drainage, metadata = load_physical_grid(grid, inputs, np.isfinite(dem))
+    network = build_flow_network(dem, grid)
+    return grid, dem, cn, drainage, metadata, network
+
+
+@st.cache_data(ttl=3600, max_entries=8, show_spinner="Routing water over terrain...")
+def _terrain_event_cached(dem_path, resolution_m, inputs, file_key, event, prior_rain_mm, manning_n, recession_h):
+    grid, dem, cn, drainage, metadata, network = _terrain_inputs_cached(dem_path, resolution_m, inputs, file_key)
+    result = simulate_terrain(dem, grid, cn, event, prior_rain_mm, drainage,
+                              manning_n, recession_h, network=network)
+    result.diagnostics["runoff_inputs"] = metadata
+    return result
+
+
+def _physical_inputs_controls(data_dir, site_name):
+    config_path = data_dir / "data/hydrology/inputs.json"
+    config = json.loads(config_path.read_text()) if config_path.exists() else {}
+    global_settings = dict(config.get("physical_inputs", {}))
+    all_site_settings = config.get("physical_inputs_by_site", {})
+    if not isinstance(all_site_settings, dict):
+        raise ValueError("physical_inputs_by_site must be an object in data/hydrology/inputs.json")
+    site_settings = dict(all_site_settings.get(site_name, {}))
+    settings = {**global_settings, **site_settings}
+    if set(settings).difference(PhysicalInputs.__dataclass_fields__):
+        raise ValueError("Unknown physical_inputs field(s) in data/hydrology/inputs.json")
+    defaults = {"land_cover_path": "worldcover.tif", "hsg_path": "hsg.tif",
+                "ksat_0_50_path": "ksat_0_50_um_s.tif", "ksat_0_100_path": "ksat_0_100_um_s.tif",
+                "restrictive_depth_path": "restrictive_depth_cm.tif", "water_table_depth_path": "water_table_depth_cm.tif",
+                "impervious_fraction_path": "impervious_fraction.tif", "drainage_capacity_path": "drainage_mm_h.tif"}
+    hydrology_dir = data_dir / "data/hydrology"
+    site_dir = hydrology_dir / "sites" / site_key(site_name)
+    for key, name in defaults.items():
+        site_default = site_dir / name
+        shared_default = hydrology_dir / name
+        if key in site_settings:
+            value = site_settings[key]
+        elif site_default.exists():
+            value = str(site_default)
+        else:
+            value = settings.get(key, str(shared_default) if shared_default.exists() else "")
+        if value and not Path(value).is_absolute():
+            value = str(data_dir / value)
+        settings[key] = value
+    initial = PhysicalInputs(**settings)
+    with st.expander("Soil and land-cover inputs", expanded=False):
+        st.caption(f"Inputs are matched to {site_name}; missing cells use the scenario profile below.")
+        hsg = st.selectbox("Assumed HSG for missing soil data", ["A", "B", "C", "D"],
+                           index="ABCD".index(normalize_hsg(initial.assumed_hsg)))
+        cover_codes = list(LAND_COVER_LABELS)
+        cover = st.selectbox("Assumed land cover for missing data", cover_codes,
+                             index=cover_codes.index(initial.assumed_land_cover), format_func=LAND_COVER_LABELS.get)
+        fraction = st.slider("Impervious fraction of built-up cells", 0., 1., initial.built_up_fraction, .05)
+        for key, label in [("land_cover_path", "ESA WorldCover raster"), ("hsg_path", "HSG raster (1=A .. 4=D)")]:
+            settings[key] = st.text_input(label, value=settings[key], key=f"{site_key(site_name)}::{key}").strip()
+        with st.expander("Soil diagnostics and drainage rasters"):
+            labels = {"ksat_0_50_path": "Minimum Ksat, 0–50 cm (µm/s)",
+                      "ksat_0_100_path": "Minimum Ksat, 0–100 cm (µm/s)",
+                      "restrictive_depth_path": "Restrictive-layer depth (cm)",
+                      "water_table_depth_path": "Seasonal water-table depth (cm)",
+                      "impervious_fraction_path": "Impervious fraction raster (0–1)",
+                      "drainage_capacity_path": "Drainage capacity raster (mm/h)"}
+            for key, label in labels.items():
+                settings[key] = st.text_input(label, value=settings[key], key=f"{site_key(site_name)}::{key}").strip()
+            settings["dual_hsg_drained"] = st.checkbox("Adequate drainage documented for dual HSG cells", value=initial.dual_hsg_drained)
+        settings["assumed_drainage_mm_h"] = st.number_input("Assumed drainage where no data (mm/h)", min_value=0., max_value=100., value=float(initial.assumed_drainage_mm_h))
+    settings.update(assumed_hsg=hsg, assumed_land_cover=cover, built_up_fraction=fraction)
+    # Typed relative paths are resolved against the application, consistently.
+    for key in defaults:
+        if settings[key] and not Path(settings[key]).is_absolute():
+            settings[key] = str(data_dir / settings[key])
+    dem_default = config.get("dem_path", "qc_dem_srtm.tif")
+    if dem_default and not Path(dem_default).is_absolute():
+        dem_default = str(data_dir / dem_default)
+    return PhysicalInputs(**settings), dem_default
+
+
+@with_rasterio_runtime
+def build_terrain_flood_map(simulated_data, reference_data, map_mode, boundary_data=None):
+    """Render a raster water-depth surface with an independent NOAH reference."""
+    terrain = simulated_data.attrs["terrain_result"]
+    boundaries = _selected_boundary_data(simulated_data, boundary_data)
+    center, bounds, site_count = _map_extent(simulated_data, boundaries)
+    map_object = folium.Map(location=center, zoom_start=11, tiles="CartoDB positron", control_scale=True)
+    if bounds:
+        map_object.fit_bounds(bounds)
+    _add_boundary_layer(map_object, boundaries)
+    source_bounds = array_bounds(*terrain.grid.shape, terrain.grid.transform)
+    transform, width, height = rasterio.warp.calculate_default_transform(
+        terrain.grid.crs, DATA_CRS, terrain.grid.shape[1], terrain.grid.shape[0], *source_bounds)
+    depths = terrain_depth_on_grid(terrain, (height, width), transform, DATA_CRS)
+    rgba = FLOOD_DEPTH_COLORMAP(np.clip(np.nan_to_num(depths) / 2.5, 0., 1.))
+    rgba[:, :, 3] = np.where(np.isfinite(depths) & (depths >= DISPLAY_DEPTH_THRESHOLD_M), .75, 0.)
+    west, south, east, north = array_bounds(height, width, transform)
+    folium.raster_layers.ImageOverlay(rgba, bounds=[[south, west], [north, east]],
+                                      name="Terrain event maximum flood depth", origin="upper", opacity=1.).add_to(map_object)
+    # A visible outline distinguishes coverage from dry areas.
+    from rasterio.features import shapes
+    coverage = terrain.report_mask if terrain.report_mask is not None else terrain.valid
+    polygons = [geometry for geometry, value in shapes(coverage.astype("uint8"), mask=coverage,
+                                                        transform=terrain.grid.transform) if value == 1]
+    from shapely.geometry import shape
+    domain = gpd.GeoDataFrame(geometry=[shape(g) for g in polygons], crs=terrain.grid.crs).to_crs(DATA_CRS)
+    folium.GeoJson(domain, name="DEM model coverage", style_function=lambda f: {
+        "fillOpacity": 0., "color": "#2B8CBE", "weight": 2.}).add_to(map_object)
+    if reference_data is not None and not reference_data.empty:
+        reference = reference_data[["Var", "hazard_level", "geometry"]].copy()
+        folium.GeoJson(reference, name="UP NOAH hazard reference", show=map_mode == "UP NOAH risk classification",
+                       style_function=lambda f: {"fillColor": risk_to_hex(f["properties"]["Var"]),
+                                                 "fillOpacity": .3, "weight": .4, "color": "#666"},
+                       tooltip=folium.GeoJsonTooltip(fields=["hazard_level"], aliases=["NOAH reference:"])).add_to(map_object)
+    map_object.get_root().html.add_child(folium.Element(_legend_html("Continuous depth spectrum")))
+    folium.LayerControl().add_to(map_object)
+    return map_object
+
+
+def _render_rainfall_runoff_analysis(simulated_data, event):
+    hydrograph = (simulated_data.attrs["terrain_result"].hydrograph if "terrain_result" in simulated_data.attrs
+                  else simulated_data.attrs["runoff_hydrograph"])
+    rainfall, runoff, timing = rainfall_runoff_analysis(event, hydrograph)
+    domain = [0., timing["axis_end_h"]]
+    storm_end = alt.Chart(pd.DataFrame({"time_h": [event.duration_h]})).mark_rule(
+        color="#888888", strokeDash=[4, 4]).encode(x="time_h:Q")
+    st.subheader("Rainfall timing")
+    rain_chart = alt.Chart(rainfall).mark_rect(color="#4575B4").encode(
+        x=alt.X("start_h:Q", title="Hours from storm start", scale=alt.Scale(domain=domain)),
+        x2="time_h:Q", y=alt.Y("intensity_mm_h:Q", title="Rainfall intensity (mm/h)"), y2=alt.datum(0),
+        tooltip=[alt.Tooltip("start_h:Q", title="Interval start (h)"),
+                 alt.Tooltip("time_h:Q", title="Interval end (h)"),
+                 alt.Tooltip("intensity_mm_h:Q", title="Intensity (mm/h)", format=".2f")])
+    st.altair_chart((rain_chart + storm_end).properties(height=210), width="stretch")
+    st.subheader("Runoff response")
+    runoff_chart = alt.Chart(runoff).mark_line(color="#238B45").encode(
+        x=alt.X("time_h:Q", title="Hours from storm start", scale=alt.Scale(domain=domain)),
+        y=alt.Y("outflow_m3_s:Q", title="Outlet discharge (m³/s)"),
+        tooltip=[alt.Tooltip("time_h:Q", title="Time (h)", format=".2f"),
+                 alt.Tooltip("outflow_m3_s:Q", title="Outlet flow (m³/s)", format=".2f")])
+    peak = alt.Chart(pd.DataFrame({"time_h": [timing["peak_runoff_time_h"]],
+                                   "outflow_m3_s": [timing["peak_runoff_m3_s"]]})).mark_point(
+        filled=True, color="#D95F0E", size=70).encode(x="time_h:Q", y="outflow_m3_s:Q")
+    st.altair_chart((runoff_chart + storm_end + peak).properties(height=250), width="stretch")
+    if timing["apparent_lag_h"] is not None:
+        st.caption(f"Peak rainfall interval: {timing['peak_rain_start_h']:.2f}–{timing['peak_rain_end_h']:.2f} h. "
+                   f"Runoff peak: {timing['peak_runoff_time_h']:.2f} h. "
+                   f"Apparent peak lag: {timing['apparent_lag_h']:.2f} h "
+                   f"(interval-based range {timing['lag_min_h']:.2f}–{timing['lag_max_h']:.2f} h).")
+    elif timing["peak_runoff_m3_s"] > 0.:
+        st.caption(f"Runoff peak: {timing['peak_runoff_time_h']:.2f} h. Rainfall has flat or tied intensity peaks, so a unique peak lag is undefined.")
+    else:
+        st.caption("No modeled outlet runoff; peak lag is undefined.")
+    st.caption("Both graphs use the same time axis. The dashed line marks the end of rainfall; runoff continues through the recession. Rainfall bars show interval averages.")
+    if "terrain_result" not in simulated_data.attrs:
+        st.caption("Polygon-mode runoff uses mapped polygon areas; overlapping polygons may inflate the aggregated flow.")
+    st.download_button("Download rainfall intervals", rainfall.to_csv(index=False), "rainfall_intervals.csv", "text/csv")
+    st.download_button("Download runoff hydrograph", hydrograph.to_csv(index=False), "runoff_hydrograph.csv", "text/csv")
+
+
+def _render_model_evaluation(simulated_data, baseline_data, population_path, boundary_data, observed_path=""):
+    st.subheader("Exposure sensitivity")
+    sensitivity = population_exposure_sensitivity(simulated_data, population_path, boundary_data)
+    if not sensitivity.empty:
+        totals = sensitivity.groupby("threshold_m", as_index=False)[["people_affected", "people_modeled", "people_unmodeled"]].sum()
+        st.dataframe(totals.round(2), hide_index=True, width="stretch")
+        st.caption("0.05, 0.10, 0.30 and 0.50 m are illustrative exposure thresholds, not universal damage cutoffs. People outside model coverage are excluded from affected counts.")
+        st.download_button("Download exposure sensitivity", sensitivity.to_csv(index=False), "exposure_sensitivity.csv", "text/csv")
+    st.subheader("Comparison with the preserved baseline")
+    comparison_baseline = baseline_data
+    if "terrain_result" in simulated_data.attrs:
+        terrain = simulated_data.attrs["terrain_result"]
+        baseline_grid = _rasterize_simulated_depth(baseline_data, terrain.grid.crs, terrain.grid.shape, terrain.grid.transform)
+        comparison_baseline = simulated_data.copy()
+        comparison_baseline["sim_depth_m"] = baseline_grid[terrain.report_mask]
+        comparison_baseline.attrs = {"terrain_result": replace(terrain, max_depth_m=baseline_grid)}
+        st.caption("Both comparison rows use the same DEM-covered cells. The preserved baseline uses original hazard CN values and the original vectorized depth relationship.")
+    rows = []
+    for name, data in [("Corrected baseline", comparison_baseline), ("Selected model", simulated_data)]:
+        exposure = population_impact_summary(data, population_path, boundary_data)
+        rows.append({"model": name, "flooded_area_sqkm": flooded_area_sqkm(data),
+                     "maximum_depth_m": float(data["sim_depth_m"].max()) if len(data) else 0.,
+                     "affected_population": float(exposure["people_affected"].sum())})
+    st.dataframe(pd.DataFrame(rows).round(3), hide_index=True, width="stretch")
+    if "terrain_result" in simulated_data.attrs:
+        terrain = simulated_data.attrs["terrain_result"]
+        st.download_button("Download maximum flood depth GeoTIFF", depth_geotiff_bytes(terrain), "terrain_max_depth_m.tif", "image/tiff")
+        with st.expander("Water balance and input coverage"):
+            st.json(terrain.diagnostics)
+        if observed_path:
+            try:
+                observed = read_aligned_raster(observed_path, terrain.grid, Resampling.nearest)
+                rows = []
+                for name, predictions in [("Corrected baseline", baseline_grid), ("Terrain model", terrain.max_depth_m)]:
+                    metrics = validation_metrics(predictions, observed, valid_mask=terrain.report_mask)
+                    rows.append({"model": name, **metrics})
+                st.subheader("Independent observed-depth validation")
+                st.dataframe(pd.DataFrame(rows).round(4), hide_index=True, width="stretch")
+                st.caption("Validation uses only common valid observation/model cells. IoU and CSI are the same binary inundation score; undefined scores remain blank. Use observations from the same event.")
+            except (ValueError, OSError, rasterio.errors.RasterioError) as exc:
+                st.error(f"Unable to validate the observed depth raster: {exc}")
+        else:
+            st.caption("Independent flood observations have not been supplied; model accuracy has not been established.")
+    else:
+        metadata = simulated_data.attrs.get("runoff_inputs", {})
+        if metadata:
+            with st.expander("Runoff input coverage"):
+                st.json(metadata)
+
+
+def _downloaded_input_sources(inputs, data_dir, site_name):
+    """Only report provenance when the selected file matches the download."""
+    try:
+        manifest = json.loads((data_dir / "data/hydrology/sources.json").read_text())
+    except (OSError, ValueError):
+        return {}
+    selected = {}
+    site_sources = manifest.get("sites", {}).get(site_name, {})
+    for name, field in (("land_cover", "land_cover_path"), ("soil", "hsg_path")):
+        source = site_sources.get(name, {})
+        if not source and site_name == "Metro Manila":
+            source = manifest.get("sources", {}).get(name, {})
+        if source.get("local_path") and getattr(inputs, field):
+            if Path(getattr(inputs, field)).resolve() == (data_dir / source["local_path"]).resolve():
+                selected[name] = source
+    return selected
+
+
+def build_hazard_reference_map(selected_data, boundary_data=None):
+    boundaries = _selected_boundary_data(selected_data, boundary_data)
+    center, bounds, site_count = _map_extent(selected_data, boundaries)
+    map_object = folium.Map(location=center, zoom_start=7 if site_count > 1 else 11,
+                            tiles="CartoDB positron", control_scale=True)
+    if bounds:
+        map_object.fit_bounds(bounds)
+    _add_boundary_layer(map_object, boundaries)
+    fields = [name for name in ("site_name", "hazard_level", "source_return_period_yr", "Var", "geometry") if name in selected_data]
+    reference = selected_data[fields].copy()
+    folium.GeoJson(reference, name="UP NOAH hazard reference",
+                   style_function=lambda f: {"fillColor": risk_to_hex(f["properties"]["Var"]),
+                                             "color": "#666", "fillOpacity": .55, "weight": .3},
+                   tooltip=folium.GeoJsonTooltip(fields=["site_name", "hazard_level"], aliases=["Site:", "Reference hazard:"])).add_to(map_object)
+    map_object.get_root().html.add_child(folium.Element(_legend_html("UP NOAH risk classification")))
+    folium.LayerControl().add_to(map_object)
+    return map_object
+
+
+@with_rasterio_runtime
 def run_app() -> None:
-    """Render the regional Streamlit application."""
-
-    st.set_page_config(layout="wide")
-    st.title("Regional Flood Simulator — Metro Manila and Philippine Provinces")
-    st.caption(
-        "UP NOAH hazard polygons are shown inside the configured administrative boundaries, "
-        "with population density and affected-population layers. "
-        "Select a site or view all covered sites."
-    )
-
+    """One map, four main results, and optional model/population details."""
+    st.set_page_config(page_title="Flood simulator", layout="wide")
+    st.title("Flood simulator")
+    st.caption("Metro Manila and selected Philippine provinces")
     data_dir = Path(__file__).resolve().parent
     try:
         hazard_data = load_data(str(data_dir))
         population_raster_path = find_population_raster(data_dir)
-        hazard_data = load_population_exposure(
-            hazard_data, str(population_raster_path)
-        )
-    except Exception as exc:
-        st.error(f"Unable to load the flood or population layers: {exc}")
+    except (ValueError, OSError, rasterio.errors.RasterioError) as exc:
+        st.error(f"Unable to load flood or population data: {exc}")
         st.stop()
-
     try:
         boundary_data = load_boundary_data(str(data_dir))
-    except Exception as exc:
+    except (ValueError, OSError) as exc:
         boundary_data = None
-        boundary_error = str(exc)
-    else:
-        boundary_error = ""
-
-    missing_sites = hazard_data.attrs.get("missing_sites", [])
-    source_errors = hazard_data.attrs.get("source_errors", [])
-    if missing_sites:
-        st.warning("Missing source archive(s): " + ", ".join(missing_sites))
-    if source_errors:
-        st.warning("Some source layers could not be read: " + " | ".join(source_errors))
-    if boundary_error:
-        st.warning("Site boundary layer could not be loaded: " + boundary_error)
-
-    available_site_set = set(hazard_data["site_name"])
-    available_sites = [name for name in SITE_MAPPING if name in available_site_set]
-    site_options = [ALL_SITES_LABEL] + available_sites
-
-    st.sidebar.header("1. Coverage area")
-    selected_site = st.sidebar.selectbox("Site / province", site_options)
-    if selected_site == ALL_SITES_LABEL:
-        selected_data = hazard_data
-        soil_site = "Metro Manila" if "Metro Manila" in available_sites else available_sites[0]
-    else:
-        selected_data = hazard_data[hazard_data["site_name"] == selected_site].copy()
-        soil_site = selected_site
-
-    st.sidebar.header("2. Rain event parameters")
-    rain_mm = st.sidebar.slider(
-        "Current rain event (mm)", min_value=10, max_value=500, value=150, step=10
-    )
-    duration_h = st.sidebar.slider(
-        "Event duration (hours)", min_value=0.5, max_value=12.0, value=3.0, step=0.5
-    )
-
-    st.sidebar.header("3. Antecedent moisture")
-    prior_rain_mm = st.sidebar.slider(
-        "Prior 5-day rainfall (mm)", min_value=0, max_value=200, value=20, step=5
-    )
-
-    st.sidebar.header("4. Display mode")
-    map_mode = st.sidebar.radio(
-        "Color polygons by", ["Continuous depth spectrum", "UP NOAH risk classification"]
-    )
-
-    simulated = simulate_flood(
-        hazard_data,
-        rain_mm=rain_mm,
-        duration_h=duration_h,
-        prior_rain_mm=prior_rain_mm,
-    )
-    selected_simulated = simulated[
-        simulated["site_name"].isin(selected_data["site_name"].unique())
-    ].copy()
-    active = selected_simulated[selected_simulated["sim_depth_m"] >= 0.05].copy()
-    risk_summary = population_risk_summary(
-        selected_simulated,
-        population_raster_path,
-        boundary_data,
-    )
-    flood_population_summary = population_impact_summary(
-        selected_simulated,
-        population_raster_path=population_raster_path,
-        boundary_data=boundary_data,
-    )
-
-    soil_lat, soil_lon = SITE_MAPPING[soil_site]["center"]
-    clay_pct, sand_pct, hsg_class = fetch_soil_properties(soil_lat, soil_lon)
-    intensity = rain_mm / duration_h
+        st.warning(f"Site boundaries could not be loaded: {exc}")
+    if hazard_data.attrs.get("missing_sites"):
+        st.warning("Missing coverage: " + ", ".join(hazard_data.attrs["missing_sites"]))
+    if hazard_data.attrs.get("source_errors"):
+        st.warning("Some hazard layers could not be read: " + " | ".join(hazard_data.attrs["source_errors"]))
+    available = set(hazard_data["site_name"])
+    site_options = [ALL_SITES_LABEL] + [name for name in SITE_MAPPING if name in available]
+    site_options += sorted(available.difference(site_options))
+    default_site = site_options.index("Metro Manila") if "Metro Manila" in site_options else 1
+    st.sidebar.header("Rain scenario")
+    selected_site = st.sidebar.selectbox("Site / province", site_options, index=default_site)
+    selected_data = (hazard_data if selected_site == ALL_SITES_LABEL
+                     else hazard_data[hazard_data["site_name"].eq(selected_site)].copy())
+    rain_mm = st.sidebar.slider("Current rain event (mm)", 0, 500, 150, 10)
+    duration_h = st.sidebar.slider("Event duration (hours)", .5, 48., 3., .5)
+    prior_rain_mm = st.sidebar.slider("Prior 5-day rainfall (mm)", 0, 200, 20, 5)
+    with st.sidebar.expander("Rainfall timing / CSV"):
+        pattern = st.selectbox("Rainfall timing", ["Uniform", "Early peak", "Middle peak", "Late peak", "CSV time series"])
+        if pattern == "CSV time series":
+            uploaded_rain = st.file_uploader("Rainfall intervals CSV", type="csv", max_upload_size=5,
+                                             help="Consecutive rain_mm and interval_h columns. CSV totals override sliders.")
+            if uploaded_rain is None:
+                st.info("Choose a rainfall CSV containing rain_mm and interval_h columns.")
+                st.stop()
+            try:
+                event = RainfallEvent.from_frame(pd.read_csv(uploaded_rain))
+            except (ValueError, pd.errors.ParserError) as exc:
+                st.error(f"Invalid rainfall time series: {exc}")
+                st.stop()
+            rain_mm, duration_h = event.total_mm, event.duration_h
+            st.caption(f"CSV storm: {rain_mm:.1f} mm over {duration_h:.2f} hours")
+        else:
+            event = make_rainfall_event(rain_mm, duration_h, pattern)
+    inputs = PhysicalInputs()
+    dem_path = observed_path = ""
+    routing_time_h, resolution_m, manning_n, recession_h = 1., 120., .06, 6.
+    with st.sidebar.expander("Advanced model settings"):
+        model_mode = st.selectbox("Simulation method", ["Corrected empirical baseline", "Soil and routed runoff (empirical depth)", "Terrain inundation (screening)"], index=1)
+        if model_mode != "Corrected empirical baseline":
+            try:
+                if selected_site == ALL_SITES_LABEL:
+                    st.info("Choose a site to use its matching soil and land-cover maps.")
+                    st.stop()
+                inputs, dem_default = _physical_inputs_controls(data_dir, selected_site)
+            except (ValueError, OSError, KeyError, TypeError) as exc:
+                st.error(f"Unable to read runoff settings: {exc}")
+                st.stop()
+        if model_mode != "Terrain inundation (screening)":
+            routing_time_h = st.slider("Runoff routing time (hours)", .1, 6., 1., .1)
+        else:
+            dem_path = st.text_input("DEM raster (elevation in metres)", dem_default).strip()
+            resolution_m = st.select_slider("Terrain cell size (m)", [60., 90., 120., 180., 240.], value=120.)
+            manning_n = st.number_input("Manning roughness (scenario assumption)", min_value=.01, max_value=.3, value=.06, step=.01)
+            recession_h = st.slider("Post-rainfall recession (hours)", 0., 24., 6., .5)
+            observed_path = st.text_input("Independent observed depth raster (optional, metres)").strip()
+            if dem_path and not Path(dem_path).is_absolute():
+                dem_path = str(data_dir / dem_path)
+            if observed_path and not Path(observed_path).is_absolute():
+                observed_path = str(data_dir / observed_path)
+    try:
+        if model_mode == "Terrain inundation (screening)":
+            if selected_site == ALL_SITES_LABEL:
+                st.info("Choose one coverage area for terrain inundation and a DEM covering its catchment.")
+                st.stop()
+            boundaries = _selected_boundary_data(selected_data, boundary_data)
+            if boundaries.empty:
+                st.error("Site boundaries are required to report terrain coverage.")
+                st.stop()
+            terrain = _terrain_event_cached(dem_path, resolution_m, inputs, _input_file_key(inputs, dem_path),
+                                            event, prior_rain_mm, manning_n, recession_h)
+            selected_simulated = terrain_to_polygons(terrain, boundaries, selected_data, selected_site)
+            selected_simulated["flood_exposure_class"] = selected_simulated["sim_depth_m"].apply(depth_to_flood_class)
+            selected_simulated["affected_population"] = 0.  # Raster exposure is authoritative.
+        elif model_mode == "Soil and routed runoff (empirical depth)":
+            runoff_data = _runoff_inputs_cached(_population_data_cache_key(selected_data), inputs,
+                                                _input_file_key(inputs), resolution_m, selected_data)
+            selected_simulated = simulate_flood(runoff_data, rain_mm, duration_h, prior_rain_mm,
+                                                rainfall_event=event, routing_time_h=routing_time_h, use_routed_depth=True)
+        else:
+            selected_simulated = simulate_flood(selected_data, rain_mm, duration_h, prior_rain_mm,
+                                                rainfall_event=event, routing_time_h=routing_time_h)
+    except (ValueError, OSError, rasterio.errors.RasterioError) as exc:
+        st.error(f"Unable to run the selected model: {exc}")
+        st.stop()
+    flood_summary = population_impact_summary(selected_simulated, population_raster_path, boundary_data)
+    affected_population = float(flood_summary["people_affected"].sum())
     area_sqkm = flooded_area_sqkm(selected_simulated)
-    mapped_population = risk_summary["people"].sum() if not risk_summary.empty else 0.0
-    affected_population = (
-        flood_population_summary["people_affected"].sum()
-        if not flood_population_summary.empty
-        else 0.0
-    )
-
-    if prior_rain_mm < 35.0:
-        amc_status = "AMC I (Dry ground — higher infiltration)"
-    elif prior_rain_mm > 52.5:
-        amc_status = "AMC III (Saturated ground — lower infiltration)"
+    maximum_depth = float(selected_simulated["sim_depth_m"].max())
+    columns = st.columns(4)
+    columns[0].metric("Flooded area", f"{area_sqkm:.2f} km²")
+    columns[1].metric("Affected population", f"{affected_population:,.0f}")
+    columns[2].metric("Maximum depth", f"{maximum_depth:.2f} m")
+    columns[3].metric("Rainfall", f"{rain_mm:.0f} mm", help=f"{duration_h:g} hours; {rain_mm / duration_h:.1f} mm/h average")
+    st.caption(f"Map and area: depth ≥{DISPLAY_DEPTH_THRESHOLD_M:.2f} m. Affected population: depth ≥{EXPOSURE_DEPTH_THRESHOLD_M:.2f} m. Storm duration: {duration_h:g} h.")
+    metadata = (selected_simulated.attrs["terrain_result"].diagnostics["runoff_inputs"] if "terrain_result" in selected_simulated.attrs
+                else selected_simulated.attrs.get("runoff_inputs", {}))
+    if metadata.get("runoff_grid_resolution_m", 0.) > metadata.get("requested_runoff_grid_resolution_m", 0.) * 1.001:
+        st.caption(f"Large-area runoff inputs summarized at {metadata['runoff_grid_resolution_m']:.0f} m (requested {metadata['requested_runoff_grid_resolution_m']:.0f} m) to keep the polygon analysis within its processing limit.")
+    if metadata and (metadata.get("soil_assumed_pct", 0.) or metadata.get("land_cover_assumed_pct", 0.)):
+        st.caption(f"Scenario assumptions: HSG {inputs.assumed_hsg}, {LAND_COVER_LABELS[inputs.assumed_land_cover].lower()}; soil missing in {metadata.get('soil_assumed_pct', 0.):.0f}% and cover missing in {metadata.get('land_cover_assumed_pct', 0.):.0f}% of model cells. Local data can be set under Advanced model settings.")
+    outside = float(flood_summary.loc[flood_summary["flood_depth_band"].eq(UNMODELED_EXPOSURE_LABEL), "people_in_band"].sum())
+    if outside > 0:
+        st.warning(f"{outside:,.0f} people are outside DEM coverage. Their exposure is unknown.")
+    source_metadata = _downloaded_input_sources(inputs, data_dir, selected_site) if model_mode != "Corrected empirical baseline" else {}
+    source_labels = []
+    if "land_cover" in source_metadata:
+        source_labels.append("Land cover: ESA WorldCover 2021")
+    if "soil" in source_metadata:
+        source_labels.append("Soil: HiHydroSoil v2.0 global estimate")
+    if source_labels:
+        st.caption(" · ".join(source_labels))
+    map_layer = st.selectbox("Map layer", ["Flood depth", "Affected population", "Population density", "UP NOAH reference"], key="map_layer", width=320)
+    active = selected_simulated[selected_simulated["sim_depth_m"] >= DISPLAY_DEPTH_THRESHOLD_M].copy()
+    if map_layer == "Population density":
+        map_object = build_population_density_map(selected_data, population_raster_path, boundary_data)
+        st.caption("Population density within the selected site boundaries.")
+    elif map_layer == "Affected population":
+        map_object = build_population_map(selected_data, population_raster_path,
+                                          population_mode="Affected population by flood",
+                                          boundary_data=boundary_data, simulated_data=selected_simulated)
+        st.caption(f"Population dots at modeled depths of {EXPOSURE_DEPTH_THRESHOLD_M:.2f} m or more.")
+    elif map_layer == "UP NOAH reference":
+        map_object = build_hazard_reference_map(selected_data, boundary_data)
+        st.caption("UP NOAH reference hazard classes; this layer is independent of the current storm.")
+    elif "terrain_result" in selected_simulated.attrs:
+        map_object = build_terrain_flood_map(selected_simulated, selected_data, "Continuous depth spectrum", boundary_data)
+        st.caption("Maximum depth during the storm and recession. The blue outline marks DEM coverage.")
     else:
-        amc_status = "AMC II (Normal ground)"
-
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
-    col1.metric("Rainfall intensity", f"{intensity:.1f} mm/hr")
-    col2.metric("ISRIC soil profile", f"Clay {clay_pct}% / Sand {sand_pct}%")
-    col3.metric("Hydrologic soil group", hsg_class)
-    col4.metric("Flooded area", f"{area_sqkm:.2f} km²")
-    col5.metric("Population in boundaries", f"{mapped_population:,.0f}")
-    col6.metric("Affected by simulated flood", f"{affected_population:,.0f}")
-    st.info(
-        f"{amc_status}. Prior 5-day accumulation: {prior_rain_mm} mm. "
-        f"Mapped polygons: {len(selected_simulated):,}."
-    )
-
-    st.subheader("Flooded area and population by site")
-    summary = _site_summary(
-        selected_simulated,
-        risk_summary=risk_summary,
-        flood_summary=flood_population_summary,
-    )
-    st.dataframe(
-        summary.rename(
-            columns={
-                "site_name": "Site",
-                "polygons": "Polygons",
-                "mapped_area_sqkm": "Mapped area (km²)",
-                "flooded_area_sqkm": "Flooded area (km²)",
-                "max_depth_m": "Maximum depth (m)",
-                "mapped_population": "Population in boundaries",
-                "affected_population": "Affected by flood",
-            }
-        ).round(2),
-        width="stretch",
-        hide_index=True,
-    )
-
-    st.subheader("Population by UP NOAH hazard risk")
-    risk_by_class = (
-        risk_summary.groupby("risk_class", sort=False)["people"]
-        .sum()
-        .reindex(POPULATION_RISK_ORDER, fill_value=0.0)
-        .rename("people")
-        .reset_index()
-    )
-    risk_total = float(risk_by_class["people"].sum())
-    risk_by_class["share_pct"] = np.where(
-        risk_total > 0.0,
-        risk_by_class["people"] * 100.0 / risk_total,
-        0.0,
-    )
-    st.caption(
-        "No risk means the population cell is inside the site boundary but outside "
-        "all UP NOAH hazard polygons. Low, moderate, and high risk come from the "
-        "UP NOAH hazard classification at that cell."
-    )
-    st.dataframe(
-        risk_by_class.rename(
-            columns={
-                "risk_class": "UP NOAH population risk",
-                "people": "People",
-                "share_pct": "Share of population (%)",
-            }
-        ).round(2),
-        width="stretch",
-        hide_index=True,
-    )
-
-    st.subheader("People by simulated flood depth")
-    flood_by_band = (
-        flood_population_summary.groupby("flood_depth_band", sort=False)
-        .agg(
-            people_in_band=("people_in_band", "sum"),
-            people_affected=("people_affected", "sum"),
-        )
-        .reindex(FLOOD_EXPOSURE_ORDER, fill_value=0.0)
-        .rename_axis("flood_depth_band")
-        .reset_index()
-    )
-    st.caption(
-        "Population is counted once per raster cell. The 0 m band includes cells "
-        "with simulated depth below 0.1 m; affected population starts at 0.1 m."
-    )
-    st.dataframe(
-        flood_by_band.rename(
-            columns={
-                "flood_depth_band": "Simulated flood depth",
-                "people_in_band": "People in band",
-                "people_affected": "People affected",
-            }
-        ).round(2),
-        width="stretch",
-        hide_index=True,
-    )
-
-    st.subheader("Separate map views")
-    hazard_tab, density_tab, affected_tab = st.tabs(
-        ["Flood hazards", "Population density heatmap", "Affected population dots"]
-    )
-
-    with hazard_tab:
-        if active.empty:
-            st.warning("No polygons meet the 0.05 m display threshold for this event.")
-        hazard_map = build_flood_map(
-            selected_simulated,
-            active,
-            map_mode,
-            boundary_data=boundary_data,
-        )
-        st_folium(
-            hazard_map,
-            width="100%",
-            height=650,
-            returned_objects=[],
-            key="hazard_interactive_map",
-        )
-
-    with density_tab:
-        st.caption(
-            "Population density is shown as a separate logarithmic yellow-to-red heatmap "
-            "on a dark basemap. All positive population estimates within the hazard-site "
-            "boundaries are treated as vulnerable population."
-        )
-        density_map = build_population_density_map(
-            selected_data,
-            population_raster_path,
-            boundary_data=boundary_data,
-        )
-        st_folium(
-            density_map,
-            width="100%",
-            height=650,
-            returned_objects=[],
-            key="population_density_map",
-        )
-
-    with affected_tab:
-        st.caption(
-            "Only population dots located inside simulated flooded polygons are shown. "
-            "Dot color follows the flood-depth spectrum; affected dots start at 0.1 m."
-        )
-        affected_map = build_population_map(
-            selected_data,
-            population_raster_path,
-            population_mode="Affected population by flood",
-            boundary_data=boundary_data,
-            simulated_data=selected_simulated,
-        )
-        st_folium(
-            affected_map,
-            width="100%",
-            height=650,
-            returned_objects=[],
-            key="affected_population_map",
-        )
+        map_object = build_flood_map(selected_simulated, active, "Continuous depth spectrum", boundary_data)
+    st_folium(map_object, width="100%", height=620, returned_objects=[], key="scenario_map")
+    if active.empty and map_layer == "Flood depth":
+        st.caption("No modeled flooding reaches the display threshold for this scenario.")
+    population_details = st.expander("Population and site details", key="population_details", on_change="rerun")
+    if population_details.open:
+        with population_details:
+            risk_summary = population_risk_summary(selected_data, population_raster_path, boundary_data)
+            st.dataframe(_site_summary(selected_simulated, risk_summary, flood_summary).round(2), hide_index=True, width="stretch")
+            bands = flood_summary.groupby("flood_depth_band", sort=False)[["people_in_band", "people_affected"]].sum().reindex(FLOOD_EXPOSURE_ORDER, fill_value=0.)
+            st.dataframe(bands.round(2), width="stretch")
+            st.caption("Population is counted once per source raster cell. Outside model coverage means unknown, not dry.")
+            risk = risk_summary.groupby("risk_class", sort=False)["people"].sum().reindex(POPULATION_RISK_ORDER, fill_value=0.)
+            st.dataframe(risk.reset_index().round(2), hide_index=True, width="stretch")
+    analysis = st.expander("Rainfall and runoff analysis", key="storm_analysis", on_change="rerun")
+    if analysis.open:
+        with analysis:
+            _render_rainfall_runoff_analysis(selected_simulated, event)
+    diagnostics = st.expander("Model comparison and validation", key="model_diagnostics", on_change="rerun")
+    if diagnostics.open:
+        with diagnostics:
+            baseline = (selected_simulated if model_mode == "Corrected empirical baseline" else
+                        simulate_flood(selected_data, rain_mm, duration_h, prior_rain_mm,
+                                       rainfall_event=event, routing_time_h=routing_time_h))
+            _render_model_evaluation(selected_simulated, baseline, population_raster_path, boundary_data, observed_path)
+    with st.expander("Model assumptions"):
+        st.write(f"Selected method: {model_mode}.")
+        if model_mode == "Terrain inundation (screening)":
+            st.write("Terrain routing uses local depression storage, open boundaries, and the available DEM. It does not yet model river stages, tides, backwater, sewer networks, or inflow from outside the DEM. Depths are screening estimates and require independent event observations for validation.")
+        elif model_mode == "Soil and routed runoff (empirical depth)":
+            st.write("Soil and land cover determine runoff CN. Rainfall timing changes runoff peaks. Inundation depth still scales from NOAH reference depths and remains an empirical estimate.")
+        else:
+            st.write("The preserved baseline uses the original hazard-based CN values and depth relationship. Its depth depends on total rainfall and duration; timing changes only its runoff hydrograph.")
+        if source_metadata:
+            for source in source_metadata.values():
+                st.markdown(f"[{source['title']}]({source['documentation']}) — {source['native_resolution']}; {source['type']}.")
+                st.caption(source["citation"])
+        st.write("Missing input cells use the explicit scenario assumptions shown above. Curve Number moisture adjustment is applied once. Model complexity alone does not demonstrate improved accuracy.")
 
 
 if __name__ == "__main__":

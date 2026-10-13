@@ -1,0 +1,53 @@
+{
+  "purpose": "Bundled DEM conservation smoke check; no observed flood data, no accuracy claim",
+  "dem": "qc_dem_srtm.tif",
+  "rain_mm": 150.0,
+  "duration_h": 3.0,
+  "prior_rain_mm": 20.0,
+  "soil_and_cover": "ESA WorldCover 2021 and HiHydroSoil v2.0 local subsets; missing cells use explicit assumptions",
+  "grid_shape": [
+    193,
+    150
+  ],
+  "diagnostics": {
+    "generated_runoff_m3": 34422626.22037322,
+    "boundary_outflow_m3": 4005677.667207069,
+    "drained_volume_m3": 0.0,
+    "end_storage_m3": 30416948.55316615,
+    "balance_error_m3": 0.0,
+    "peak_boundary_outflow_m3_s": 294.94121443051324,
+    "peak_outflow_time_h": 3.077777777777768,
+    "model_area_sqkm": 409.2768,
+    "cell_resolution_m": 120.0,
+    "recession_h": 6.0,
+    "manning_n": 0.06,
+    "open_outlet_cells": 681
+  },
+  "input_coverage": {
+    "model_cells": 28422,
+    "land_cover_supplied_cells": 28422,
+    "soil_supplied_cells": 28365,
+    "impervious_supplied_cells": 0,
+    "drainage_supplied_cells": 0,
+    "land_cover_assumed_pct": 0.0,
+    "soil_assumed_pct": 0.20054887059320245,
+    "impervious_assumed_pct": 100.0,
+    "assumed_hsg": "D",
+    "assumed_land_cover": 50,
+    "built_up_impervious_fraction": 0.65,
+    "assumed_drainage_mm_h": 0.0,
+    "source_paths": {
+      "land_cover_path": "D:\\JTR_files\\Flood_Simulation\\data\\hydrology\\worldcover.tif",
+      "hsg_path": "D:\\JTR_files\\Flood_Simulation\\data\\hydrology\\hsg.tif",
+      "ksat_0_50_path": "",
+      "ksat_0_100_path": "",
+      "restrictive_depth_path": "",
+      "water_table_depth_path": "",
+      "impervious_fraction_path": "",
+      "drainage_capacity_path": ""
+    }
+  },
+  "maximum_depth_m": 5.8353473699168905,
+  "relative_balance_error": 0.0,
+  "elapsed_seconds": 1.5441368999890983
+}

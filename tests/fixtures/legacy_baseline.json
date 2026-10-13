@@ -1,0 +1,22 @@
+{
+  "description": "Original vectorized simulate_flood outputs, captured before upgrades. Synthetic hazard codes 1/2/3; CN 78/88/98; base depths .25/1/2 m.",
+  "rain_mm": 150,
+  "duration_h": 3,
+  "depths_by_prior_rain_mm": {
+    "20": [
+      0.16,
+      0.68,
+      1.47
+    ],
+    "40": [
+      0.17,
+      0.71,
+      1.48
+    ],
+    "80": [
+      0.18,
+      0.73,
+      1.49
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "dem_path": "qc_dem_srtm.tif",
+  "physical_inputs": {
+    "land_cover_path": "data/hydrology/worldcover.tif",
+    "hsg_path": "data/hydrology/hsg.tif",
+    "ksat_0_50_path": "",
+    "ksat_0_100_path": "",
+    "restrictive_depth_path": "",
+    "water_table_depth_path": "",
+    "impervious_fraction_path": "",
+    "drainage_capacity_path": "",
+    "assumed_hsg": "D",
+    "assumed_land_cover": 50,
+    "built_up_fraction": 0.65,
+    "assumed_drainage_mm_h": 0,
+    "dual_hsg_drained": false
+  }
+}

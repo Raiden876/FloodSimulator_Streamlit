@@ -1,0 +1,1289 @@
+{
+  "sources": {
+    "land_cover": {
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E120_Map.tif",
+      "title": "ESA WorldCover 2021 v200",
+      "documentation": "https://esa-worldcover.org/en/data-access",
+      "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+      "license": "CC BY 4.0",
+      "native_resolution": "10 m",
+      "epoch": "2021",
+      "type": "Satellite-derived land-cover classification",
+      "local_path": "data/hydrology/worldcover.tif",
+      "classes_present": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        80,
+        90,
+        95
+      ],
+      "shape": [
+        5881,
+        3602
+      ],
+      "crs": "EPSG:4326",
+      "sha256": "aa81dbe022e3a484c442f204d679da4c00badaf010cb3d0aa12e396d3e1698d4",
+      "bytes": 1257896,
+      "requested_bounds_wgs84": [
+        120.88,
+        14.32,
+        121.18,
+        14.81
+      ],
+      "retrieved_utc": "2026-10-13T09:06:08.651732+00:00"
+    },
+    "soil": {
+      "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+      "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+      "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+      "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative (2026)",
+      "license": "CC BY 4.0",
+      "native_resolution": "250 m",
+      "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+      "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations",
+      "local_path": "data/hydrology/hsg.tif",
+      "classes_present": [
+        2,
+        3,
+        4
+      ],
+      "shape": [
+        216,
+        133
+      ],
+      "crs": "EPSG:4326",
+      "sha256": "b4c5dc780707e61a8a52c1a6b3e16d83feb46649a24983df492bc5eb3ac8f9af",
+      "bytes": 2954,
+      "requested_bounds_wgs84": [
+        120.88,
+        14.32,
+        121.18,
+        14.81
+      ],
+      "retrieved_utc": "2026-10-13T09:06:10.914210+00:00"
+    }
+  },
+  "sites": {
+    "Metro Manila": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "MetroManila.zip",
+      "hazard_layer": "MetroManila_Flood_25year.shp",
+      "bounds_wgs84": [
+        120.90683162703927,
+        14.35383899775383,
+        121.13503641400006,
+        14.785291728000036
+      ],
+      "retrieved_utc": "2026-10-13T09:45:22.906889+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/metro_manila/worldcover.tif",
+        "shape": [
+          1599,
+          834
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90,
+          95
+        ],
+        "valid_footprint_cells": 1333566,
+        "sha256": "41ada8281aab691cecc52384d316f6d55437dc5454f83657983d39949ff595c1",
+        "bytes": 180122,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N12E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/metro_manila/hsg.tif",
+        "shape": [
+          193,
+          101
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          2,
+          3,
+          4
+        ],
+        "valid_footprint_cells": 13424,
+        "sha256": "b72e557700e6cb6aeb15ab794a82625d124d70adc7582ab168221eb1d4dcb0b5",
+        "bytes": 2848,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Nueva Ecija": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "NuevaEcija.zip",
+      "hazard_layer": "NuevaEcija_Flood_25year.shp",
+      "bounds_wgs84": [
+        120.61542724751935,
+        15.175592349000006,
+        121.37752258931525,
+        16.132444823453923
+      ],
+      "retrieved_utc": "2026-10-13T09:45:23.587428+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/nueva_ecija/worldcover.tif",
+        "shape": [
+          3557,
+          2758
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90
+        ],
+        "valid_footprint_cells": 9810206,
+        "sha256": "c37a8f611335713323e33befe11705a3eee80ffe0fd31bbe903cd6027921f042",
+        "bytes": 1179350,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/nueva_ecija/hsg.tif",
+        "shape": [
+          428,
+          332
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          3,
+          4
+        ],
+        "valid_footprint_cells": 141724,
+        "sha256": "cc7552ae1bda61d8d98053e2f3a31c1ea84610205c5120028c6886492e0acbe9",
+        "bytes": 4398,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Pampanga": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Pampanga.zip",
+      "hazard_layer": "Pampanga_Flood_25year.shp",
+      "bounds_wgs84": [
+        120.35926770509953,
+        14.767597796173732,
+        120.95165839967262,
+        15.278676207999936
+      ],
+      "retrieved_utc": "2026-10-13T09:45:34.018024+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/pampanga/worldcover.tif",
+        "shape": [
+          1909,
+          2145
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90,
+          95
+        ],
+        "valid_footprint_cells": 4094805,
+        "sha256": "776aeabb9b3a68e485a21019ce5ff9df67d41de42635b7ae7c67f6a9acfee576",
+        "bytes": 674004,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E120_Map.tif",
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N12E120",
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/pampanga/hsg.tif",
+        "shape": [
+          230,
+          259
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          3,
+          4
+        ],
+        "valid_footprint_cells": 56600,
+        "sha256": "09ad63293caeafca9276e1b89dad5cd9e2ec1cdbd0ab41109ea63e6b866ffb17",
+        "bytes": 7112,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Bulacan": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Bulacan.zip",
+      "hazard_layer": "Bulacan_Flood_25year.shp",
+      "bounds_wgs84": [
+        120.68825298843372,
+        14.688489937000064,
+        121.3436893347319,
+        15.27219688300007
+      ],
+      "retrieved_utc": "2026-10-13T09:45:41.138245+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/bulacan/worldcover.tif",
+        "shape": [
+          2176,
+          2371
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90,
+          95
+        ],
+        "valid_footprint_cells": 5159296,
+        "sha256": "95747f10d1a42177a0ae890ff017019939109409f9e8be155c53cea1f3b7da0b",
+        "bytes": 618084,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E120_Map.tif",
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N12E120",
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/bulacan/hsg.tif",
+        "shape": [
+          262,
+          285
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          3,
+          4
+        ],
+        "valid_footprint_cells": 70057,
+        "sha256": "d1aa6de4ed7f9aea0e06a4c75930c8655846d2a5c3b793629e1c982a9de7c786",
+        "bytes": 4600,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Tarlac": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Tarlac.zip",
+      "hazard_layer": "Tarlac_Flood_25year.shp",
+      "bounds_wgs84": [
+        120.17109495139384,
+        15.181128215902707,
+        120.76449512179796,
+        15.862431135000044
+      ],
+      "retrieved_utc": "2026-10-13T09:45:47.966466+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/tarlac/worldcover.tif",
+        "shape": [
+          2540,
+          2153
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90
+        ],
+        "valid_footprint_cells": 5468620,
+        "sha256": "ed364df6b4bc356b2b7c052f1d26180a8f34864b59dd0292f42268440d35befd",
+        "bytes": 784494,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/tarlac/hsg.tif",
+        "shape": [
+          306,
+          259
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          3,
+          4
+        ],
+        "valid_footprint_cells": 79254,
+        "sha256": "00b36a5defdbcb0402930eda3a1a3f8efe01ebafba1d7a5e822c6f67cd8a9e43",
+        "bytes": 6770,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Aurora": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Aurora.zip",
+      "hazard_layer": "Aurora_Flood_25year.shp",
+      "bounds_wgs84": [
+        121.28528692352435,
+        15.005424026138588,
+        121.43157001360274,
+        15.833829113494165
+      ],
+      "retrieved_utc": "2026-10-13T09:45:55.260661+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/aurora/worldcover.tif",
+        "shape": [
+          3060,
+          547
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90,
+          95
+        ],
+        "valid_footprint_cells": 1673820,
+        "sha256": "ad098be2753ad4044bb54fd961d50153db805050afd20076b0c9c82500821666",
+        "bytes": 79566,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/aurora/hsg.tif",
+        "shape": [
+          368,
+          67
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          3,
+          4
+        ],
+        "valid_footprint_cells": 23080,
+        "sha256": "ae749f83e4e10b1a271aa5dbe4c781c75b698eac76fd3feb0ad98f1f53cc787f",
+        "bytes": 2282,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Zambales": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Zambales.zip",
+      "hazard_layer": "Zambales_Flood_25year.shp",
+      "bounds_wgs84": [
+        119.96502747132462,
+        14.739101399181653,
+        120.4629291839897,
+        15.379796142934776
+      ],
+      "retrieved_utc": "2026-10-13T09:45:57.745612+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/zambales/worldcover.tif",
+        "shape": [
+          2389,
+          1816
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90,
+          95
+        ],
+        "valid_footprint_cells": 4338424,
+        "sha256": "d0d51c48e03786bf381939bd1ef0cba90ead5bd15132bf58e70b844ae0e470b3",
+        "bytes": 450600,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E117_Map.tif",
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E120_Map.tif",
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E117_Map.tif",
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N12E117",
+          "N12E120",
+          "N15E117",
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/zambales/hsg.tif",
+        "shape": [
+          287,
+          219
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "valid_footprint_cells": 49388,
+        "sha256": "b8a94eb9d4de132112b7c967e02d19761b0fbea49eb1a695d7a5d7490bc8f927",
+        "bytes": 5222,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Bataan": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Bataan.zip",
+      "hazard_layer": "Bataan/PH030800000_FH_25yr.shp",
+      "bounds_wgs84": [
+        120.24827258357287,
+        14.512187492921786,
+        120.58273665224596,
+        14.922757025539761
+      ],
+      "retrieved_utc": "2026-10-13T09:46:09.167799+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/bataan/worldcover.tif",
+        "shape": [
+          1529,
+          1219
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90,
+          95
+        ],
+        "valid_footprint_cells": 1863851,
+        "sha256": "9bf4d3c061d7012a87cfd50bb3c6931a1d1601ed83528e50a9f7422f0f04f689",
+        "bytes": 180198,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N12E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/bataan/hsg.tif",
+        "shape": [
+          184,
+          147
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          2,
+          3,
+          4
+        ],
+        "valid_footprint_cells": 21832,
+        "sha256": "a62dd26dfe30f343b184b6ea722e9d543bbd895566f8d8dda64495ca2c8d0d3c",
+        "bytes": 2892,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Pangasinan": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Pangasinan.zip",
+      "hazard_layer": "Pangasinan/PH015500000_FH_25yr.shp",
+      "bounds_wgs84": [
+        119.91151043428304,
+        15.66135222665461,
+        120.87261262300011,
+        16.24692171842677
+      ],
+      "retrieved_utc": "2026-10-13T09:46:12.950799+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/pangasinan/worldcover.tif",
+        "shape": [
+          2206,
+          3460
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90,
+          95
+        ],
+        "valid_footprint_cells": 7632760,
+        "sha256": "5b15645910c6d1e66a8a301c422e44d3c333f2032746f09065fa792e7068dfbb",
+        "bytes": 992920,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E117_Map.tif",
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N15E117",
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/pangasinan/hsg.tif",
+        "shape": [
+          265,
+          416
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          2,
+          3,
+          4
+        ],
+        "valid_footprint_cells": 95546,
+        "sha256": "cc37dc8b5e370c9904c9d8a0b3998ff43a28a28d028992fa8a4509c0904ec18a",
+        "bytes": 8566,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Nueva Vizcaya": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "NuevaVizcaya.zip",
+      "hazard_layer": "NuevaVizcaya_Flood_25year.shp",
+      "bounds_wgs84": [
+        121.0672564026975,
+        15.760187224442408,
+        121.38693284240317,
+        16.741715049356838
+      ],
+      "retrieved_utc": "2026-10-13T09:46:20.177993+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/nueva_vizcaya/worldcover.tif",
+        "shape": [
+          3631,
+          1171
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90
+        ],
+        "valid_footprint_cells": 4251901,
+        "sha256": "f8b967e9de0f0702d8c5c1bee54925d2842ca7973b9b0de3b0f2f9a1098251ac",
+        "bytes": 501544,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/nueva_vizcaya/hsg.tif",
+        "shape": [
+          436,
+          142
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          3,
+          4
+        ],
+        "valid_footprint_cells": 61589,
+        "sha256": "44d6c42e5a8776a42397643a2cef42bed08b875e57bf005ab60994d6758cb0c3",
+        "bytes": 2518,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Rizal": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Rizal.zip",
+      "hazard_layer": "Rizal_Flood_25year.shp",
+      "bounds_wgs84": [
+        121.09589144700014,
+        14.523182237204786,
+        121.24528813281283,
+        14.823748674190558
+      ],
+      "retrieved_utc": "2026-10-13T09:46:23.127627+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/rizal/worldcover.tif",
+        "shape": [
+          1114,
+          546
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90
+        ],
+        "valid_footprint_cells": 608244,
+        "sha256": "6b3df524fbf59353a37d6210a7b65c2ac0a977371e83cb344588578d2870abe3",
+        "bytes": 81206,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N12E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/rizal/hsg.tif",
+        "shape": [
+          134,
+          66
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          3,
+          4
+        ],
+        "valid_footprint_cells": 8792,
+        "sha256": "879f9321e4f4feb130519da62f9c14b35cfa356cc0c9fb1b444006f9eaafb06f",
+        "bytes": 1950,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Quezon": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Quezon.zip",
+      "hazard_layer": "Quezon_Flood_25year.shp",
+      "bounds_wgs84": [
+        121.25546207819113,
+        13.193815037622535,
+        122.68835051385133,
+        15.216888695844965
+      ],
+      "retrieved_utc": "2026-10-13T09:46:25.457710+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/quezon/worldcover.tif",
+        "shape": [
+          7484,
+          5187
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90,
+          95
+        ],
+        "valid_footprint_cells": 37789285,
+        "sha256": "78627770749f36accc5f629ec329908285d4e1936436cc866a1a54916e467307",
+        "bytes": 1223328,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N12E120_Map.tif",
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N15E120_Map.tif"
+        ],
+        "tile_ids": [
+          "N12E120",
+          "N15E120"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/quezon/hsg.tif",
+        "shape": [
+          899,
+          624
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          2,
+          3,
+          4
+        ],
+        "valid_footprint_cells": 209437,
+        "sha256": "5583c3fa537d57268c83f76ad7d4d4301fbc28015457d2dd37cff429a2518999",
+        "bytes": 9494,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "South Cotabato": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "SouthCotabato.zip",
+      "hazard_layer": "SouthCotabato_Flood_25year.shp",
+      "bounds_wgs84": [
+        124.37882653834626,
+        6.055132684306456,
+        125.25912084302261,
+        6.667389523389448
+      ],
+      "retrieved_utc": "2026-10-13T09:46:40.335353+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/south_cotabato/worldcover.tif",
+        "shape": [
+          2270,
+          3255
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90
+        ],
+        "valid_footprint_cells": 7388850,
+        "sha256": "ec0e970ad91410cf683d6169703448bafe77165cf777e0676537c3ea82c534b5",
+        "bytes": 941742,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N06E123_Map.tif"
+        ],
+        "tile_ids": [
+          "N06E123"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/south_cotabato/hsg.tif",
+        "shape": [
+          274,
+          392
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          2,
+          3,
+          4
+        ],
+        "valid_footprint_cells": 105303,
+        "sha256": "3bd790b4351af6c8c861bd9d907cbfa2aaa66afa86a2b5b29875ff6924baddd1",
+        "bytes": 4348,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Sarangani": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "Sarangani.zip",
+      "hazard_layer": "Sarangani_Flood_25year.shp",
+      "bounds_wgs84": [
+        124.4711473508426,
+        6.01511862478876,
+        125.33631564775114,
+        6.224107786432939
+      ],
+      "retrieved_utc": "2026-10-13T09:46:47.076480+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/sarangani/worldcover.tif",
+        "shape": [
+          783,
+          3196
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90
+        ],
+        "valid_footprint_cells": 2502468,
+        "sha256": "9a2c71260a74478df70209bb9a2bbb406a7457872d84c27b8e70146011e63bd0",
+        "bytes": 253232,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N06E123_Map.tif"
+        ],
+        "tile_ids": [
+          "N06E123"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/sarangani/hsg.tif",
+        "shape": [
+          95,
+          384
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          2,
+          3,
+          4
+        ],
+        "valid_footprint_cells": 34090,
+        "sha256": "45099aa889dcaa0ebf93031a62dc318aeb4e51e98484bf73f11abe5d21326eb3",
+        "bytes": 3514,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Davao del Sur": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "DavaoDelSur.zip",
+      "hazard_layer": "DavaoDelSur_Flood_25year.shp",
+      "bounds_wgs84": [
+        125.04730449187745,
+        6.542339872717316,
+        125.68085656132753,
+        7.493773463499408
+      ],
+      "retrieved_utc": "2026-10-13T09:46:50.502070+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/davao_del_sur/worldcover.tif",
+        "shape": [
+          3522,
+          2353
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90
+        ],
+        "valid_footprint_cells": 8287266,
+        "sha256": "5224f21d6dad08625a79f9ea10ca33984fb890a95f090b3bcf45585783861b08",
+        "bytes": 659998,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N06E123_Map.tif"
+        ],
+        "tile_ids": [
+          "N06E123"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/davao_del_sur/hsg.tif",
+        "shape": [
+          423,
+          283
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          2,
+          3,
+          4
+        ],
+        "valid_footprint_cells": 94403,
+        "sha256": "bf3613d346d600982489a130a6117ebd22ddca9e5cd9893a582f90ff79cca55e",
+        "bytes": 3766,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    },
+    "Davao Occidental": {
+      "coverage": "bounding envelope of UP NOAH hazard polygons",
+      "hazard_archive": "DavaoOccidental.zip",
+      "hazard_layer": "DavaoOccidental_Flood_100year.shp",
+      "bounds_wgs84": [
+        125.31750021212885,
+        5.3658931419934035,
+        125.60816314891319,
+        6.481238758917705
+      ],
+      "retrieved_utc": "2026-10-13T09:46:54.615483+00:00",
+      "land_cover": {
+        "local_path": "data/hydrology/sites/davao_occidental/worldcover.tif",
+        "shape": [
+          4119,
+          1092
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 30,
+        "classes_present": [
+          10,
+          20,
+          30,
+          40,
+          50,
+          60,
+          80,
+          90
+        ],
+        "valid_footprint_cells": 4497948,
+        "sha256": "d07a870c28616cb81615f6e721385041f40cdf26a88d16a2c2df52c5364a6f99",
+        "bytes": 306434,
+        "title": "ESA WorldCover 2021 v200",
+        "documentation": "https://esa-worldcover.org/en/data-access",
+        "citation": "Zanaga et al. (2022), ESA WorldCover 10 m 2021 v200, doi:10.5281/zenodo.7254221",
+        "license": "CC BY 4.0",
+        "native_resolution": "10 m",
+        "epoch": "2021",
+        "type": "Satellite-derived land-cover classification, nearest-neighbour resampled; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N03E123_Map.tif",
+          "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N06E123_Map.tif"
+        ],
+        "tile_ids": [
+          "N03E123",
+          "N06E123"
+        ]
+      },
+      "soil": {
+        "local_path": "data/hydrology/sites/davao_occidental/hsg.tif",
+        "shape": [
+          495,
+          132
+        ],
+        "crs": "EPSG:32651",
+        "output_resolution_m": 250,
+        "classes_present": [
+          3,
+          4
+        ],
+        "valid_footprint_cells": 46994,
+        "sha256": "fb3869822ce91fa360ce5eea8127be4c4af40e754b14f612eb237abd40d87110",
+        "bytes": 2682,
+        "url": "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif",
+        "title": "HiHydroSoil v2.0 hydrologic soil groups (NatCap reclassification)",
+        "documentation": "https://data.naturalcapitalalliance.stanford.edu/dataset/sts-cdd01bf6db49adf846783f7d47d9ca1186c9b3143df283e9539a2d8969c07ecb",
+        "citation": "Simons, G.W.H., R. Koster, P. Droogers (2020), HiHydroSoil v2.0, FutureWater Report 213; Natural Capital Alliance reclassified derivative",
+        "license": "CC BY 4.0",
+        "native_resolution": "250 m",
+        "epoch": "Global model estimate; HiHydroSoil v2.0 (2020)",
+        "type": "Model-derived HSG from soil hydraulic properties and depth; not field observations; clipped to the UP NOAH footprint bounding envelope",
+        "source_urls": [
+          "https://data.naturalcapitalalliance.stanford.edu/download/global/HiHydroSoilv2/HiHydroSoilV2_Soil_Groups_250m_reclassified.tif"
+        ]
+      }
+    }
+  }
+}

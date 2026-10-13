@@ -1,4 +1,6 @@
 # Runtime dependencies for simulator.py on Streamlit Community Cloud
+affine
+altair
 folium
 geopandas
 matplotlib
